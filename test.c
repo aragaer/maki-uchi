@@ -57,7 +57,7 @@ static char *test_log_multiple_days() {
   for (i = 0; i < 10; i++)
     log_add(log, 10, timestamp + ONE_DAY * i * 2);
 
-  dump_log(log);
+  dump(log);
   for (i = 0; i < 10; i++) {
     debug("Day %i %ld\n", i * 2, timestamp + ONE_DAY * i * 2);
     mu_assert("Done for even day",
@@ -96,6 +96,7 @@ static char *test_skipped_days3() {
   log_init(log);
   log_add(log, 10, timestamp + ONE_DAY);
   log_add(log, 20, timestamp + ONE_DAY * 2);
+  dump_log(log);
   mu_assert("Done for third day", log_status(log, timestamp + ONE_DAY * 2) == 10);
   mu_assert("Done for second day", log_status(log, timestamp + ONE_DAY) == 10);
   mu_assert("Done for first day", log_status(log, timestamp) == 10);

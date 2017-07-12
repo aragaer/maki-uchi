@@ -17,10 +17,10 @@ void log_init(maki_uchi_log_t *log) {
 }
 
 void log_release(maki_uchi_log_t *log) {
-  struct list_head *entry = log->head.next;
-  while (entry != &log->head) {
-    void *to_free = entry;
-    entry = entry->next;
+  struct list_head *item = log->head.next;
+  while (item != &log->head) {
+    void *to_free = item;
+    item = item->next;
     free(to_free);
   }
 }
@@ -30,11 +30,11 @@ static int match(struct log_entry_s *entry, time_t timestamp) {
 }
 
 static struct log_entry_s *find_entry(maki_uchi_log_t *log, time_t timestamp) {
-  struct list_head *entry;
-  for (entry = log->head.next; entry != &log->head; entry = entry->next) {
-    struct log_entry_s *log_entry = container_of(entry, struct log_entry_s, list);
-    if (match(log_entry, timestamp))
-      return log_entry;
+  struct list_head *item;
+  for (item = log->head.next; item != &log->head; item = item->next) {
+    struct log_entry_s *entry = container_of(item, struct log_entry_s, list);
+    if (match(entry, timestamp))
+      return entry;
   }
   return NULL;
 }
@@ -62,8 +62,22 @@ static void insert_before(struct list_head *new, struct list_head *old) {
   old->prev = new;
 }
 
-static void insert_entry(maki_uchi_log_t *log, struct log_entry_s *entry) {
-  insert_before(&entry->list, log->head.next);
+static void insert_entry(maki_uchi_log_t *log, struct log_entry_s *new_entry) {
+  struct list_head *item;
+  for (item = log->head.next; item != &log->head; item = item->next) {
+    struct log_entry_s *old_entry = container_of(item, struct log_entry_s, list);
+    if (old_entry->end + 1 == new_entry->start) {
+      old_entry->end = new_entry->end;
+      return;
+    }
+    if (old_entry->start == new_entry->end + 1) {
+      old_entry->start = new_entry->start;
+      return;
+    }
+    if (old_entry->end < new_entry->start)
+      break;
+  }
+  insert_before(&new_entry->list, item);
 }
 
 void log_add(maki_uchi_log_t *log, int count, time_t timestamp) {
@@ -81,10 +95,10 @@ void log_add(maki_uchi_log_t *log, int count, time_t timestamp) {
 }
 
 void dump_log(maki_uchi_log_t *log) {
-  struct list_head *entry;
-  for (entry = log->head.next; entry != &log->head; entry = entry->next) {
-    struct log_entry_s *log_entry = container_of(entry, struct log_entry_s, list);
-    printf("%p: %ld-%ld %d prev=%p next=%p\n", log_entry, log_entry->start,
-	   log_entry->end, log_entry->count, entry->prev, entry->next);
+  struct list_head *item;
+  for (item = log->head.next; item != &log->head; item = item->next) {
+    struct log_entry_s *entry = container_of(item, struct log_entry_s, list);
+    printf("%p: %ld-%ld %d prev=%p next=%p\n", entry, entry->start,
+	   entry->end, entry->count, item->prev, item->next);
   }
 }
