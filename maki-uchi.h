@@ -5,14 +5,18 @@
 
 #define DAILY_REQUIREMENT 10
 
+struct list_head {
+  struct list_head *prev, *next;
+};
+
 struct log_entry_s {
+  struct list_head list;
   int count;
   time_t start, end;
-  struct log_entry_s *prev, *next;
 };
 
 typedef struct maki_uchi_log_s {
-  struct log_entry_s head;
+  struct list_head head;
 } maki_uchi_log_t;
 
 void log_init(maki_uchi_log_t *log);
