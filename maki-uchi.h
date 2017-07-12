@@ -6,13 +6,13 @@
 #define DAILY_REQUIREMENT 10
 
 struct log_entry_s {
-  int done;
-  time_t timestamp;
-  struct log_entry_s *next;
+  int count;
+  time_t start, end;
+  struct log_entry_s *prev, *next;
 };
 
 typedef struct maki_uchi_log_s {
-  struct log_entry_s *entries;
+  struct log_entry_s head;
 } maki_uchi_log_t;
 
 void log_init(maki_uchi_log_t *log);
