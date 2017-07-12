@@ -3,6 +3,8 @@
 
 #include <time.h>
 
+#define DAILY_REQUIREMENT 10
+
 struct log_entry_s {
   int done;
   time_t timestamp;
@@ -10,7 +12,7 @@ struct log_entry_s {
 };
 
 typedef struct maki_uchi_log_s {
-  struct log_entry_s *entries_head;
+  struct log_entry_s *entries;
 } maki_uchi_log_t;
 
 void log_init(maki_uchi_log_t *log);

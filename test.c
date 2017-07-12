@@ -48,10 +48,22 @@ static char *test_log_multiple_days() {
   log_release(log);
   return NULL;
 }
+
+static char *test_skipped_days() {
+  time_t timestamp = 0;
+  maki_uchi_log_t *log = alloca(sizeof(maki_uchi_log_t));
+  log_init(log);
+  log_add(log, 20, timestamp + ONE_DAY);
+  mu_assert("Done for second day", log_status(log, timestamp + ONE_DAY) == 10);
+  mu_assert("Done for first day", log_status(log, timestamp) == 10);
+  log_release(log);
+  return NULL;
+}
  
 static char *all_tests() {
   mu_run_test(test_log);
   mu_run_test(test_log_multiple_days);
+  mu_run_test(test_skipped_days);
   return NULL;
 }
  
