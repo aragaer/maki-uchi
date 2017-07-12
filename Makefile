@@ -1,6 +1,20 @@
-all:
+CFLAGS := -Wall -Wextra -Werror
 
-test: maki-uchi-test
+all: maki-uchi
+
+test: maki-uchi-test maki-uchi
 	./maki-uchi-test
+	./test.sh
 
-maki-uchi-test: maki-uchi-test.c
+maki-uchi-test: CPPFLAGS += -DDEBUG
+maki-uchi-test: test.o maki-uchi.o
+
+maki-uchi: main.c maki-uchi.o
+
+maki-uchi maki-uchi-test:
+	$(CC) -o $@ $^
+
+clean:
+	rm -f maki-uchi maki-uchi-test *.o
+
+.PHONY: all test clean

@@ -9,6 +9,7 @@ check_string() {
 
 rm -f test.data
 check_string "`./maki-uchi`" "You did not do your maki-uchi today"
+test ! -f test.data
 result=`./maki-uchi 10`
 check_string "$result" ""
 test -f test.data
