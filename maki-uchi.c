@@ -8,6 +8,16 @@ void log_init(maki_uchi_log_t *log) {
   log->entries_head = NULL;
 }
 
+void log_release(maki_uchi_log_t *log) {
+  struct log_entry_s *entry = log->entries_head;
+  while (entry) {
+    void *to_free = entry;
+    entry = entry->next;
+    free(to_free);
+  }
+  log->entries_head = NULL;
+}
+
 int log_status(maki_uchi_log_t *log, time_t timestamp) {
   struct log_entry_s *entry;
   for (entry = log->entries_head; entry; entry = entry->next)

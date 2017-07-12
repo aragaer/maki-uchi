@@ -24,6 +24,7 @@ static char *test_log() {
   mu_assert("Done for day 0", log_status(log, timestamp) == 10);
   mu_assert("Not done for day -1", log_status(log, timestamp - ONE_DAY) == 0);
   mu_assert("Done for day 1", log_status(log, timestamp + ONE_DAY) == 10);
+  log_release(log);
   return NULL;
 }
 
@@ -44,6 +45,7 @@ static char *test_log_multiple_days() {
     mu_assert("Not done for odd day",
 	      log_status(log, timestamp + ONE_DAY * (i * 2 + 1)) == 0);
   }
+  log_release(log);
   return NULL;
 }
  
