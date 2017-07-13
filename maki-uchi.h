@@ -23,6 +23,7 @@ void log_init(maki_uchi_log_t *log);
 int log_status(maki_uchi_log_t *log, time_t timestamp);
 void log_add(maki_uchi_log_t *log, int coutn, time_t timestamp);
 void log_release(maki_uchi_log_t *log);
+size_t log_write(maki_uchi_log_t *log, char *buf, size_t bufsize);
 
 #ifdef DEBUG
 void dump_log(maki_uchi_log_t *log);

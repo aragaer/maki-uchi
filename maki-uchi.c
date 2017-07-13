@@ -62,22 +62,36 @@ static void insert_before(struct list_head *new, struct list_head *old) {
   old->prev = new;
 }
 
+static void remove_entry(struct list_head *item) {
+  struct list_head *next = item->next;
+  next->prev = item->prev;
+  next->prev->next = next;
+}
+
+static void merge_entries(maki_uchi_log_t *log) {
+  struct list_head *first, *second;
+  first = log->head.next;
+  second = first->next;
+  for (; second != &log->head; first = second, second = second->next) {
+    struct log_entry_s *first_entry = container_of(first, struct log_entry_s, list);
+    struct log_entry_s *second_entry = container_of(second, struct log_entry_s, list);
+    if (first_entry->start == second_entry->end + 1) {
+      second_entry->end = first_entry->end;
+      remove_entry(first);
+      free(first_entry);
+    }
+  }
+}
+
 static void insert_entry(maki_uchi_log_t *log, struct log_entry_s *new_entry) {
   struct list_head *item;
   for (item = log->head.next; item != &log->head; item = item->next) {
     struct log_entry_s *old_entry = container_of(item, struct log_entry_s, list);
-    if (old_entry->end + 1 == new_entry->start) {
-      old_entry->end = new_entry->end;
-      return;
-    }
-    if (old_entry->start == new_entry->end + 1) {
-      old_entry->start = new_entry->start;
-      return;
-    }
     if (old_entry->end < new_entry->start)
       break;
   }
   insert_before(&new_entry->list, item);
+  merge_entries(log);
 }
 
 void log_add(maki_uchi_log_t *log, int count, time_t timestamp) {
@@ -101,4 +115,25 @@ void dump_log(maki_uchi_log_t *log) {
     printf("%p: %ld-%ld %d prev=%p next=%p\n", entry, entry->start,
 	   entry->end, entry->count, item->prev, item->next);
   }
+}
+
+size_t log_write(maki_uchi_log_t *log, char *buf, size_t bufsize) {
+  struct tm tm;
+  struct list_head *item;
+  size_t result = 0;
+  for (item = log->head.next; item != &log->head; item = item->next) {
+    struct log_entry_s *entry = container_of(item, struct log_entry_s, list);
+    localtime_r(&entry->start, &tm);
+    result += strftime(buf+result, bufsize-result, "%Y.%m.%d", &tm);
+    if (entry->end - entry->start > ONE_DAY) {
+      time_t last_day = entry->end - ONE_DAY + 1;
+      localtime_r(&last_day, &tm);
+      result += strftime(buf+result, bufsize-result, "-%Y.%m.%d", &tm);
+    }
+    if (result < bufsize) {
+      buf[result++] = '\n';
+      buf[result] = '\0';
+    }
+  }
+  return result;
 }

@@ -1,5 +1,6 @@
 #include <alloca.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 #include "maki-uchi.h"
@@ -18,6 +19,7 @@ int tests_run;
 #define ONE_DAY (24 * 60 * 60)
 
 time_t timestamp = 0;
+char buf[1024], expected[1024];
 
 static char *test_log() {
   maki_uchi_log_t *log = alloca(sizeof(maki_uchi_log_t));
@@ -114,6 +116,56 @@ static char *test_two_excercises() {
   log_release(log);
   return NULL;
 }
+
+static char *test_serialize() {
+  time_t new_stamp = timestamp;
+  maki_uchi_log_t *log = alloca(sizeof(maki_uchi_log_t));
+  log_init(log);
+  size_t result = log_write(log, buf, sizeof(buf));
+  expected[0] = '\0';
+
+  mu_assert("Empty log", result == 0 && strcmp(buf, expected) == 0);
+
+  log_add(log, 10, timestamp);
+  strftime(expected, sizeof(expected), "%Y.%m.%d\n", localtime(&timestamp));
+
+  result = log_write(log, buf, sizeof(buf));
+
+  mu_assert("One record", result == strlen(expected) && strcmp(buf, expected) == 0);
+
+  new_stamp = timestamp + ONE_DAY;
+  log_add(log, 10, new_stamp);
+  result = strftime(expected, sizeof(expected), "%Y.%m.%d", localtime(&timestamp));
+  strftime(expected+result, sizeof(expected)-result, "-%Y.%m.%d\n", localtime(&new_stamp));
+
+  result = log_write(log, buf, sizeof(buf));
+  debug("Expecting:\n===\n%s===\nGot:\n===\n%s===\n", expected, buf);
+
+  mu_assert("Double record", result == strlen(expected) && strcmp(buf, expected) == 0);
+
+  new_stamp = timestamp + ONE_DAY * 3;
+  log_add(log, 10, new_stamp);
+  strcpy(expected, buf);
+  strftime(expected, sizeof(expected), "%Y.%m.%d\n", localtime(&new_stamp));
+  strcat(expected, buf);
+
+  result = log_write(log, buf, sizeof(buf));
+  debug("Expecting:\n===\n%s===\nGot:\n===\n%s===\n", expected, buf);
+
+  mu_assert("Two records", result == strlen(expected) && strcmp(buf, expected) == 0);
+
+  log_add(log, 10, new_stamp);
+  result = strftime(expected, sizeof(expected), "%Y.%m.%d", localtime(&timestamp));
+  strftime(expected+result, sizeof(expected)-result, "-%Y.%m.%d\n", localtime(&new_stamp));
+
+  result = log_write(log, buf, sizeof(buf));
+  debug("Expecting:\n===\n%s===\nGot:\n===\n%s===\n", expected, buf);
+
+  mu_assert("One record again", result == strlen(expected) && strcmp(buf, expected) == 0);
+
+  log_release(log);
+  return NULL;
+}
  
 static char *all_tests() {
   mu_run_test(test_log);
@@ -123,6 +175,7 @@ static char *all_tests() {
   mu_run_test(test_skipped_days2);
   mu_run_test(test_skipped_days3);
   mu_run_test(test_two_excercises);
+  mu_run_test(test_serialize);
   return NULL;
 }
  
