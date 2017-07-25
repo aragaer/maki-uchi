@@ -13,4 +13,7 @@ test ! -f test.data
 result=`./maki-uchi 10`
 check_string "$result" ""
 test -f test.data
+date +%Y.%m.%d | diff -q - test.data
 check_string "`./maki-uchi`" "You did your maki-uchi today"
+date -d "2 days ago" +%Y.%m.%d > test.data
+check_string "`./maki-uchi`" "You did not do your maki-uchi today"

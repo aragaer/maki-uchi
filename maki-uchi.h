@@ -26,6 +26,7 @@ void log_release(maki_uchi_log_t *log);
 size_t log_write(maki_uchi_log_t *log, char *buf, size_t bufsize);
 int log_read(maki_uchi_log_t *log, char *buf, size_t buflen);
 size_t log_read_file(maki_uchi_log_t *log, int fd);
+size_t log_write_file(maki_uchi_log_t *log, int fd);
 
 #ifdef DEBUG
 void dump_log(maki_uchi_log_t *log);

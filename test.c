@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -281,6 +282,47 @@ static char *test_read_file() {
   return NULL;
 }
 
+static char *test_write_file() {
+  maki_uchi_log_t *log = alloca(sizeof(maki_uchi_log_t));
+  log_init(log);
+
+  char filename[] = "/tmp/test-maki-uchiXXXXXX";
+  int fd = mkstemp(filename);
+  write(fd, "1970.01.10", 10);
+  lseek(fd, 0, SEEK_SET);
+  int result = log_write_file(log, fd);
+  mu_assert("Write 1 success", result == 0);
+  mu_assert("File is empty", lseek(fd, 0, SEEK_END) == 0);
+
+  log_read(log, "1970.01.01", 10);
+  lseek(fd, 0, SEEK_SET);
+  result = log_write_file(log, fd);
+  mu_assert("Write 2 success", result == 11);
+  mu_assert("File has correct size", lseek(fd, 0, SEEK_END) == result);
+  void *data = mmap(NULL, result, PROT_READ, MAP_PRIVATE, fd, 0);
+  mu_assert("mmap success", data != NULL);
+  mu_assert("File has correct contents", memcmp(data, "1970.01.01\n", result) == 0);
+
+  log_read(log, "1970.01.01-1970.01.02", 21);
+  lseek(fd, 0, SEEK_SET);
+  result = log_write_file(log, fd);
+  mu_assert("Write 3 success", result == 22);
+  mu_assert("File has correct size", lseek(fd, 0, SEEK_END) == result);
+  data = mmap(NULL, result, PROT_READ, MAP_PRIVATE, fd, 0);
+  mu_assert("mmap success", data != NULL);
+  mu_assert("File has correct contents",
+	    memcmp(data, "1970.01.01-1970.01.02\n", result) == 0);
+
+  close(fd);
+  unlink(filename);
+
+  result = log_write_file(log, fd);
+  mu_assert("Write 4 fail", result == -1);
+
+  log_release(log);
+  return NULL;
+}
+
 static char *all_tests() {
   mu_run_test(test_log);
   mu_run_test(test_one_day);
@@ -292,6 +334,7 @@ static char *all_tests() {
   mu_run_test(test_serialize);
   mu_run_test(test_read);
   mu_run_test(test_read_file);
+  mu_run_test(test_write_file);
   return NULL;
 }
  

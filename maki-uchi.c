@@ -1,4 +1,4 @@
-#define _XOPEN_SOURCE
+#define _XOPEN_SOURCE 500
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -255,4 +255,33 @@ size_t log_read_file(maki_uchi_log_t *log, int fd) {
   int result = log_read(log, data, len);
   munmap(data, len);
   return result == 0 ? len : -1;
+}
+
+size_t log_write_file(maki_uchi_log_t *log, int fd) {
+  size_t file_size = 0;
+  struct list_head *item;
+  for (item = log->head.next; item != &log->head; item = item->next) {
+    struct log_entry_s *entry = container_of(item, struct log_entry_s, list);
+    if (entry->end == entry->start + ONE_DAY - 1)
+      file_size += DATE_LEN + 1;
+    else
+      file_size += DATE_LEN + 1 + DATE_LEN + 1;
+  }
+  ftruncate(fd, file_size);
+  if (file_size == 0)
+    return 0;
+  char *buf = malloc(file_size + 1);
+  if (buf == NULL)
+    return -1;
+  log_write(log, buf, file_size + 1);
+  void *data = mmap(NULL, file_size, PROT_WRITE, MAP_SHARED, fd, 0);
+  if (data == MAP_FAILED) {
+    perror("map");
+    free(buf);
+    return -1;
+  }
+  memcpy(data, buf, file_size);
+  free(buf);
+  munmap(data, file_size);
+  return file_size;
 }
