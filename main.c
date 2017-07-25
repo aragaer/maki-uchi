@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[] __attribute__((unused))) {
   if (argc == 2) {
-    int fd = open("test.data", O_WRONLY | O_CREAT);
+    int fd = open("test.data", O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
     close(fd);
   } else {
     struct stat buf;

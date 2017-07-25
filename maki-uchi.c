@@ -1,7 +1,11 @@
+#define _XOPEN_SOURCE
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "maki-uchi.h"
 
@@ -23,6 +27,7 @@ void log_release(maki_uchi_log_t *log) {
     item = item->next;
     free(to_free);
   }
+  log_init(log);
 }
 
 static int match(struct log_entry_s *entry, time_t timestamp) {
@@ -136,4 +141,118 @@ size_t log_write(maki_uchi_log_t *log, char *buf, size_t bufsize) {
     }
   }
   return result;
+}
+
+typedef enum {
+  BEGIN,
+  ONE_DATE,
+  SECOND_DATE,
+  EOL,
+  END,
+  ERROR,
+} reader_state;
+
+struct read_runner {
+  char *ptr;
+  struct tm *tm;
+  struct log_entry_s *entry;
+  maki_uchi_log_t *log;
+  size_t data_left;
+  reader_state state;
+};
+
+#define DATE_LEN 10
+
+static reader_state process_date(struct read_runner *this) {
+  if (this->data_left < DATE_LEN
+      || strptime(this->ptr, "%Y.%m.%d", this->tm) == NULL) {
+    return ERROR;
+  }
+  this->ptr += DATE_LEN;
+  this->data_left -= DATE_LEN;
+  if (this->state == BEGIN) {
+    this->entry = alloc_entry();
+    this->entry->start = mktime(this->tm);
+    return ONE_DATE;
+  } else
+    return EOL;
+}
+
+static reader_state process_hyphen(struct read_runner *this) {
+  if (this->data_left == 0 || *this->ptr != '-')
+    return EOL;
+  this->ptr++;
+  this->data_left--;
+  return SECOND_DATE;
+}
+
+static reader_state process_eol(struct read_runner *this) {
+  this->entry->end = mktime(this->tm) + ONE_DAY - 1;
+  this->entry->count = DAILY_REQUIREMENT;
+  insert_entry(this->log, this->entry);
+  this->entry = NULL;
+  if (this->data_left <= 0)
+    return END;
+  else if (*this->ptr != '\n')
+    return ERROR;
+  this->ptr++;
+  this->data_left--;
+  return BEGIN;
+}
+
+reader_state (*sm[6])(struct read_runner *) = {
+  [BEGIN] = process_date,
+  [ONE_DATE] = process_hyphen,
+  [SECOND_DATE] = process_date,
+  [EOL] = process_eol,
+};
+
+static reader_state step(struct read_runner *this) {
+  switch (this->state) {
+  case BEGIN:
+  case SECOND_DATE:
+    return process_date(this);
+  case ONE_DATE:
+    return process_hyphen(this);
+  case EOL:
+    return process_eol(this);
+  default:
+    break;
+  }
+  return this->state;
+}
+
+int log_read(maki_uchi_log_t *log, char *buf, size_t buflen) {
+  time_t base = 0;
+  struct tm tm;
+  localtime_r(&base, &tm);
+  log_release(log);
+  struct read_runner reader = {
+    .ptr = buf,
+    .tm = &tm,
+    .data_left = buflen,
+    .state = BEGIN,
+    .entry = NULL,
+    .log = log,
+  };
+  while (reader.state != ERROR && reader.state != END)
+    reader.state = step(&reader);
+  free(reader.entry);
+  if (reader.data_left == 0 || *reader.ptr == '\0')
+    return 0;
+  else
+    return -1;
+}
+
+size_t log_read_file(maki_uchi_log_t *log, int fd) {
+  off_t len = lseek(fd, 0, SEEK_END);
+  log_release(log);
+  if (len == 0)
+    return 0;
+  void *data = mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
+  if (data == MAP_FAILED)
+    return -1;
+  int result = log_read(log, data, len);
+  munmap(data, len);
+  return result == 0 ? len : -1;
 }

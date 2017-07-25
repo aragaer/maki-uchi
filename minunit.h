@@ -2,9 +2,10 @@
     if (!(test))				\
       return message;				\
   } while (0)
-#define mu_run_test(test) do {			\
+
+#define mu_run_test(test, ...) do {		\
     printf("Running " #test "\n");		\
-    char *message = test();			\
+    char *message = test(__VA_ARGS__);		\
     tests_run++;				\
     if (message)				\
       return message;				\
