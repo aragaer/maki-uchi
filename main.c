@@ -24,9 +24,17 @@ int main(int argc, char *argv[] __attribute__((unused))) {
     if (fd == -1 && errno != ENOENT)
       perror("open");
     log_read_file(&log, fd);
-    if (log_status(&log, now) == 0)
+    if (log_status(&log, now) == 0) {
       printf("You did not do your maki-uchi today\n");
-    else
+      log_entry_t *entry = log_get_last_entry(&log);
+      if (entry == NULL) {
+	printf("You did not do maki-uchi at all\n");
+      } else {
+	char buf[11];
+	strftime(buf, sizeof(buf), "%Y.%m.%d", localtime(&entry->start));
+	printf("The last date you did your maki-uchi is %s\n", buf);
+      }
+    } else
       printf("You did your maki-uchi today\n");
     close(fd);
   }
