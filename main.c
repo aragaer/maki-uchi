@@ -12,6 +12,11 @@ int main(int argc, char *argv[] __attribute__((unused))) {
   maki_uchi_log_t log;
   log_init(&log);
   time_t now = time(NULL);
+  int fd = open("test.data", O_RDONLY);
+  if (fd == -1 && errno != ENOENT)
+    perror("open");
+  log_read_file(&log, fd);
+  close(fd);
   if (argc == 2) {
     int fd = open("test.data", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     if (fd == -1 && errno != ENOENT)
@@ -20,10 +25,6 @@ int main(int argc, char *argv[] __attribute__((unused))) {
     log_write_file(&log, fd);
     close(fd);
   } else {
-    int fd = open("test.data", O_RDONLY);
-    if (fd == -1 && errno != ENOENT)
-      perror("open");
-    log_read_file(&log, fd);
     if (log_status(&log, now) == 0) {
       printf("You did not do your maki-uchi today\n");
       log_entry_t *entry = log_get_last_entry(&log);
@@ -36,6 +37,5 @@ int main(int argc, char *argv[] __attribute__((unused))) {
       }
     } else
       printf("You did your maki-uchi today\n");
-    close(fd);
   }
 }

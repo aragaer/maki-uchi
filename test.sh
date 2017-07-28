@@ -29,8 +29,10 @@ two_days_ago=$(date -d "2 days ago" +%Y.%m.%d)
 echo $two_days_ago > test.data
 check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
 check_cmd_output ./maki-uchi "The last date you did your maki-uchi is $two_days_ago"
+result=`./maki-uchi 10`
+today=$(date +%Y.%m.%d)
+/bin/echo -e "$today\n$two_days_ago" | diff -q - test.data
 
 #TODO:
 # Should also print past info
-# If there is data in the file, keep it
 # Properly roll over maki-uchi to the past dates
