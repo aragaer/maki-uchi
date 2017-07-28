@@ -32,7 +32,6 @@ check_cmd_output ./maki-uchi "The last date you did your maki-uchi is $two_days_
 result=`./maki-uchi 10`
 today=$(date +%Y.%m.%d)
 /bin/echo -e "$today\n$two_days_ago" | diff -q - test.data
-check_cmd_output ./maki-uchi "The last date you did your maki-uchi is $two_days_ago"
 
 #TODO:
 # Should also print past info
