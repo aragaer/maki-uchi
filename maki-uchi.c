@@ -15,9 +15,16 @@
       const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
       (type *)( (char *)__mptr - offsetof(type,member) );})
 
+void list_init(struct list_head *list) {
+  list->next = list->prev = list;
+}
+
+int list_is_empty(struct list_head *list) {
+  return list->next == list;
+}
+
 void log_init(maki_uchi_log_t *log) {
-  struct list_head *head = &log->head;
-  head->next = head->prev = head;
+  list_init(&log->head);
 }
 
 void log_release(maki_uchi_log_t *log) {
@@ -60,14 +67,14 @@ static struct log_entry_s *alloc_entry() {
   return result;
 }
 
-static void insert_before(struct list_head *new, struct list_head *old) {
+static void list_insert_before(struct list_head *new, struct list_head *old) {
   new->next = old;
   new->prev = old->prev;
   new->prev->next = new;
   old->prev = new;
 }
 
-static void remove_entry(struct list_head *item) {
+static void list_remove_item(struct list_head *item) {
   struct list_head *next = item->next;
   next->prev = item->prev;
   next->prev->next = next;
@@ -82,7 +89,7 @@ static void merge_entries(maki_uchi_log_t *log) {
     struct log_entry_s *second_entry = container_of(second, struct log_entry_s, list);
     if (first_entry->start == second_entry->end + 1) {
       second_entry->end = first_entry->end;
-      remove_entry(first);
+      list_remove_item(first);
       free(first_entry);
     }
   }
@@ -95,7 +102,7 @@ static void insert_entry(maki_uchi_log_t *log, struct log_entry_s *new_entry) {
     if (old_entry->end < new_entry->start)
       break;
   }
-  insert_before(&new_entry->list, item);
+  list_insert_before(&new_entry->list, item);
   merge_entries(log);
 }
 
@@ -149,7 +156,6 @@ typedef enum {
   SECOND_DATE,
   EOL,
   END,
-  ERROR,
 } reader_state;
 
 struct read_runner {
@@ -163,64 +169,52 @@ struct read_runner {
 
 #define DATE_LEN 10
 
-static reader_state process_date(struct read_runner *this) {
+static void read_date(struct read_runner *this) {
   if (this->data_left < DATE_LEN
       || strptime(this->ptr, "%Y.%m.%d", this->tm) == NULL) {
-    return ERROR;
+    this->state = END;
+  } else {
+    this->ptr += DATE_LEN;
+    this->data_left -= DATE_LEN;
+    if (this->state == BEGIN) {
+      this->entry = alloc_entry();
+      this->entry->start = mktime(this->tm);
+      this->state = ONE_DATE;
+    } else
+      this->state = EOL;
   }
-  this->ptr += DATE_LEN;
-  this->data_left -= DATE_LEN;
-  if (this->state == BEGIN) {
-    this->entry = alloc_entry();
-    this->entry->start = mktime(this->tm);
-    return ONE_DATE;
-  } else
-    return EOL;
 }
 
-static reader_state process_hyphen(struct read_runner *this) {
+static void read_hyphen(struct read_runner *this) {
   if (this->data_left == 0 || *this->ptr != '-')
-    return EOL;
-  this->ptr++;
-  this->data_left--;
-  return SECOND_DATE;
+    this->state = EOL;
+  else {
+    this->ptr++;
+    this->data_left--;
+    this->state = SECOND_DATE;
+  }
 }
 
-static reader_state process_eol(struct read_runner *this) {
+static void read_eol(struct read_runner *this) {
   this->entry->end = mktime(this->tm) + ONE_DAY - 1;
   this->entry->count = DAILY_REQUIREMENT;
   insert_entry(this->log, this->entry);
   this->entry = NULL;
-  if (this->data_left <= 0)
-    return END;
-  else if (*this->ptr != '\n')
-    return ERROR;
-  this->ptr++;
-  this->data_left--;
-  return BEGIN;
-}
-
-reader_state (*sm[6])(struct read_runner *) = {
-  [BEGIN] = process_date,
-  [ONE_DATE] = process_hyphen,
-  [SECOND_DATE] = process_date,
-  [EOL] = process_eol,
-};
-
-static reader_state step(struct read_runner *this) {
-  switch (this->state) {
-  case BEGIN:
-  case SECOND_DATE:
-    return process_date(this);
-  case ONE_DATE:
-    return process_hyphen(this);
-  case EOL:
-    return process_eol(this);
-  default:
-    break;
+  if (this->data_left <= 0 || *this->ptr != '\n')
+    this->state = END;
+  else {
+    this->ptr++;
+    this->data_left--;
+    this->state = BEGIN;
   }
-  return this->state;
 }
+
+void (*sm[])(struct read_runner *) = {
+  [BEGIN] = read_date,
+  [ONE_DATE] = read_hyphen,
+  [SECOND_DATE] = read_date,
+  [EOL] = read_eol,
+};
 
 int log_read(maki_uchi_log_t *log, char *buf, size_t buflen) {
   time_t base = 0;
@@ -235,13 +229,10 @@ int log_read(maki_uchi_log_t *log, char *buf, size_t buflen) {
     .entry = NULL,
     .log = log,
   };
-  while (reader.state != ERROR && reader.state != END)
-    reader.state = step(&reader);
+  while (reader.state != END)
+    sm[reader.state](&reader);
   free(reader.entry);
-  if (reader.data_left == 0 || *reader.ptr == '\0')
-    return 0;
-  else
-    return -1;
+  return reader.data_left ? -1 : 0;
 }
 
 size_t log_read_file(maki_uchi_log_t *log, int fd) {
@@ -287,13 +278,13 @@ size_t log_write_file(maki_uchi_log_t *log, int fd) {
 }
 
 struct log_entry_s *log_get_last_entry(maki_uchi_log_t *log) {
-  if (log->head.next == &log->head)
+  if (list_is_empty(&log->head))
     return NULL;
   return container_of(log->head.next, struct log_entry_s, list);
 }
 
 struct log_entry_s *log_get_first_entry(maki_uchi_log_t *log) {
-  if (log->head.next == &log->head)
+  if (list_is_empty(&log->head))
     return NULL;
   return container_of(log->head.prev, struct log_entry_s, list);
 }
