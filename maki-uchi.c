@@ -291,3 +291,9 @@ struct log_entry_s *log_get_last_entry(maki_uchi_log_t *log) {
     return NULL;
   return container_of(log->head.next, struct log_entry_s, list);
 }
+
+struct log_entry_s *log_get_first_entry(maki_uchi_log_t *log) {
+  if (log->head.next == &log->head)
+    return NULL;
+  return container_of(log->head.prev, struct log_entry_s, list);
+}

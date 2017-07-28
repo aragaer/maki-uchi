@@ -28,6 +28,7 @@ int log_read(maki_uchi_log_t *log, char *buf, size_t buflen);
 size_t log_read_file(maki_uchi_log_t *log, int fd);
 size_t log_write_file(maki_uchi_log_t *log, int fd);
 struct log_entry_s *log_get_last_entry(maki_uchi_log_t *log);
+struct log_entry_s *log_get_first_entry(maki_uchi_log_t *log);
 
 #ifdef DEBUG
 void dump_log(maki_uchi_log_t *log);

@@ -334,6 +334,34 @@ static char *test_get_last_entry() {
   log_read(log, "1970.01.01", 10);
   entry = log_get_last_entry(log);
   mu_assert("Got one entry", entry != NULL);
+  mu_assert("Got correct entry", entry->start == 0);
+
+  log_read(log, "1970.01.03\n1970.01.01", 21);
+  entry = log_get_last_entry(log);
+  mu_assert("Got one entry", entry != NULL);
+  mu_assert("Got correct entry", entry->start == ONE_DAY * 2);
+
+  log_release(log);
+  return NULL;
+}
+
+static char *test_get_first_entry() {
+  maki_uchi_log_t *log = alloca(sizeof(maki_uchi_log_t));
+  log_init(log);
+  log_entry_t *entry;
+
+  entry = log_get_first_entry(log);
+  mu_assert("No entries", entry == NULL);
+
+  log_read(log, "1970.01.01", 10);
+  entry = log_get_first_entry(log);
+  mu_assert("Got one entry", entry != NULL);
+  mu_assert("Got correct entry", entry->start == 0);
+
+  log_read(log, "1970.01.03\n1970.01.01", 21);
+  entry = log_get_first_entry(log);
+  mu_assert("Got one entry", entry != NULL);
+  mu_assert("Got correct entry", entry->start == 0);
 
   log_release(log);
   return NULL;
@@ -352,6 +380,7 @@ static char *all_tests() {
   mu_run_test(test_read_file);
   mu_run_test(test_write_file);
   mu_run_test(test_get_last_entry);
+  mu_run_test(test_get_first_entry);
   return NULL;
 }
  
