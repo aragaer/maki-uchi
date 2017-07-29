@@ -10,7 +10,7 @@ check_string() {
 check_cmd_output() {
     cmd=$1
     output="$2"
-    if ! ($cmd | grep -q "$output") ; then
+    if ! ($cmd | fgrep -q "$output") ; then
 	/bin/echo "'$output' not found in output of '$cmd'"
 	exit 1
     fi
@@ -66,5 +66,15 @@ check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[1]
 check_cmd_output ./maki-uchi "You skipped ${DATES[3]} to ${DATES[2]}, ${DATES[6]} to ${DATES[5]} and ${DATES[8]}"
 check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is ${DATES[9]}"
 
-#TODO:
-# Properly roll over maki-uchi to the past dates
+> test.data
+./maki-uchi 20
+check_string $(cat test.data) "${DATES[1]}-${DATES[0]}"
+
+echo ${DATES[1]} > test.data
+./maki-uchi 30
+check_string $(cat test.data) "${DATES[3]}-${DATES[0]}"
+
+echo ${DATES[1]} > test.data
+./maki-uchi garbage > /dev/null ||:
+check_string $(cat test.data) "${DATES[1]}"
+check_cmd_output "./maki-uchi garbage" "Usage: maki-uchi [number]"
