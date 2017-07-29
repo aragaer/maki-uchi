@@ -367,6 +367,31 @@ static char *test_get_first_entry() {
   return NULL;
 }
 
+static char *test_get_entry_before() {
+  maki_uchi_log_t *log = alloca(sizeof(maki_uchi_log_t));
+  log_init(log);
+  log_entry_t *entry;
+
+  entry = log_get_entry_before(log, NULL);
+  mu_assert("Nothing before NULL", entry == NULL);
+
+  log_read(log, "1970.01.01", 10);
+  entry = log_get_entry_before(log, NULL);
+  mu_assert("Latest entry is before NULL", entry == log_get_last_entry(log));
+  mu_assert("Nothing before it", log_get_entry_before(log, entry) == NULL);
+
+  log_read(log, "1970.01.03\n1970.01.01", 21);
+  entry = log_get_entry_before(log, NULL);
+  mu_assert("Latest entry is before NULL", entry == log_get_last_entry(log));
+  entry = log_get_entry_before(log, entry);
+  mu_assert("One more before it", entry == log_get_first_entry(log));
+  entry = log_get_entry_before(log, entry);
+  mu_assert("Nothing more", entry == NULL);
+
+  log_release(log);
+  return NULL;
+}
+
 static char *all_tests() {
   mu_run_test(test_log);
   mu_run_test(test_one_day);
@@ -381,6 +406,7 @@ static char *all_tests() {
   mu_run_test(test_write_file);
   mu_run_test(test_get_last_entry);
   mu_run_test(test_get_first_entry);
+  mu_run_test(test_get_entry_before);
   return NULL;
 }
  

@@ -16,6 +16,10 @@ check_cmd_output() {
     fi
 }
 
+for i in $(seq 0 10) ; do
+    DATES[$i]=$(date -d "$i days ago" +%Y.%m.%d)
+done
+
 rm -f test.data
 check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
 check_cmd_output ./maki-uchi "You did not do maki-uchi at all"
@@ -25,28 +29,42 @@ check_string "$result" ""
 test -f test.data
 date +%Y.%m.%d | diff -q - test.data
 check_cmd_output ./maki-uchi "You did your maki-uchi today"
-two_days_ago=$(date -d "2 days ago" +%Y.%m.%d)
-echo $two_days_ago > test.data
+echo ${DATES[2]} > test.data
 check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
-check_cmd_output ./maki-uchi "The last date you did your maki-uchi is $two_days_ago"
+check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[2]}"
 result=`./maki-uchi 10`
-today=$(date +%Y.%m.%d)
-/bin/echo -e "$today\n$two_days_ago" | diff -q - test.data
-four_days_ago=$(date -d "4 days ago" +%Y.%m.%d)
-six_days_ago=$(date -d "6 days ago" +%Y.%m.%d)
-echo "$six_days_ago-$four_days_ago" >> test.data
-check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is $six_days_ago"
+/bin/echo -e "${DATES[0]}\n${DATES[2]}" | diff -q - test.data
+echo "${DATES[6]}-${DATES[4]}" >> test.data
+check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is ${DATES[6]}"
 
-echo "$six_days_ago-$four_days_ago" > test.data
+echo "${DATES[6]}-${DATES[4]}" > test.data
 check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
-check_cmd_output ./maki-uchi "The last date you did your maki-uchi is $four_days_ago"
-check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is $six_days_ago"
+check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[4]}"
+check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is ${DATES[6]}"
 
-/bin/echo -e "$four_days_ago\n$six_days_ago" > test.data
+/bin/echo -e "${DATES[4]}\n${DATES[6]}" > test.data
 check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
-check_cmd_output ./maki-uchi "The last date you did your maki-uchi is $four_days_ago"
-check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is $six_days_ago"
+check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[4]}"
+check_cmd_output ./maki-uchi "You skipped ${DATES[5]}"
+check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is ${DATES[6]}"
+
+/bin/echo -e "${DATES[2]}\n${DATES[6]}" > test.data
+check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
+check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[2]}"
+check_cmd_output ./maki-uchi "You skipped ${DATES[5]} to ${DATES[3]}"
+check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is ${DATES[6]}"
+
+/bin/echo -e "${DATES[2]}\n${DATES[4]}\n${DATES[6]}" > test.data
+check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
+check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[2]}"
+check_cmd_output ./maki-uchi "You skipped ${DATES[3]} and ${DATES[5]}"
+check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is ${DATES[6]}"
+
+/bin/echo -e "${DATES[1]}\n${DATES[4]}\n${DATES[7]}\n${DATES[9]}" > test.data
+check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
+check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[1]}"
+check_cmd_output ./maki-uchi "You skipped ${DATES[3]} to ${DATES[2]}, ${DATES[6]} to ${DATES[5]} and ${DATES[8]}"
+check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is ${DATES[9]}"
 
 #TODO:
-# Should also print past info
 # Properly roll over maki-uchi to the past dates

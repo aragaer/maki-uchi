@@ -17,6 +17,12 @@ char *format_stamp(time_t value) {
   return stamp_buf;
 }
 
+void print_skipped(log_entry_t *before, log_entry_t *after) {
+  printf("%s", format_stamp(before->end+1));
+  if (after->start != before->end + ONE_DAY + 1)
+    printf(" to %s", format_stamp(after->start-1));
+}
+
 int main(int argc, char *argv[] __attribute__((unused))) {
   maki_uchi_log_t log;
   log_init(&log);
@@ -44,9 +50,25 @@ int main(int argc, char *argv[] __attribute__((unused))) {
 	       format_stamp(entry->end));
     } else
       printf("You did your maki-uchi today\n");
-    log_entry_t *entry = log_get_first_entry(&log);
-    if (entry != NULL)
+    log_entry_t *entry = log_get_last_entry(&log);
+    log_entry_t *next = log_get_entry_before(&log, entry);
+    log_entry_t *first = log_get_first_entry(&log);
+    int have_skipped_days = next != NULL;
+    if (have_skipped_days)
+      printf("You skipped ");
+    while (next) {
+      print_skipped(next, entry);
+      entry = next;
+      next = log_get_entry_before(&log, entry);
+      if (next == first)
+	printf(" and ");
+      else if (next != NULL)
+	printf(", ");
+    }
+    if (have_skipped_days)
+      printf("\n");
+    if (first != NULL)
       printf("The earliest date you did your maki-uchi is %s\n",
-	     format_stamp(entry->start));
+	     format_stamp(first->start));
   }
 }
