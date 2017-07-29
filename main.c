@@ -7,6 +7,15 @@
 
 #include "maki-uchi.h"
 
+#define ONE_DAY (60*60*24)
+
+static char stamp_buf[11];
+
+char *format_stamp(time_t value) {
+  value -= value % ONE_DAY;
+  strftime(stamp_buf, sizeof(stamp_buf), "%Y.%m.%d", localtime(&value));
+  return stamp_buf;
+}
 
 int main(int argc, char *argv[] __attribute__((unused))) {
   maki_uchi_log_t log;
@@ -27,15 +36,17 @@ int main(int argc, char *argv[] __attribute__((unused))) {
   } else {
     if (log_status(&log, now) == 0) {
       printf("You did not do your maki-uchi today\n");
-      log_entry_t *entry = log_get_first_entry(&log);
+      log_entry_t *entry = log_get_last_entry(&log);
       if (entry == NULL) {
 	printf("You did not do maki-uchi at all\n");
-      } else {
-	char buf[11];
-	strftime(buf, sizeof(buf), "%Y.%m.%d", localtime(&entry->start));
-	printf("The last date you did your maki-uchi is %s\n", buf);
-      }
+      } else
+	printf("The last date you did your maki-uchi is %s\n",
+	       format_stamp(entry->end));
     } else
       printf("You did your maki-uchi today\n");
+    log_entry_t *entry = log_get_first_entry(&log);
+    if (entry != NULL)
+      printf("The earliest date you did your maki-uchi is %s\n",
+	     format_stamp(entry->start));
   }
 }

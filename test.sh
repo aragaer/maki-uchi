@@ -32,6 +32,20 @@ check_cmd_output ./maki-uchi "The last date you did your maki-uchi is $two_days_
 result=`./maki-uchi 10`
 today=$(date +%Y.%m.%d)
 /bin/echo -e "$today\n$two_days_ago" | diff -q - test.data
+four_days_ago=$(date -d "4 days ago" +%Y.%m.%d)
+six_days_ago=$(date -d "6 days ago" +%Y.%m.%d)
+echo "$six_days_ago-$four_days_ago" >> test.data
+check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is $six_days_ago"
+
+echo "$six_days_ago-$four_days_ago" > test.data
+check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
+check_cmd_output ./maki-uchi "The last date you did your maki-uchi is $four_days_ago"
+check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is $six_days_ago"
+
+/bin/echo -e "$four_days_ago\n$six_days_ago" > test.data
+check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
+check_cmd_output ./maki-uchi "The last date you did your maki-uchi is $four_days_ago"
+check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is $six_days_ago"
 
 #TODO:
 # Should also print past info
