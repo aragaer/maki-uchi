@@ -87,10 +87,33 @@ void usage() {
   exit(EXIT_FAILURE);
 }
 
-int main(int argc, char *argv[]) {
-  maki_uchi_log_t log;
-  log_init(&log);
-  time_t now = time(NULL);
+void store_log(maki_uchi_log_t *log) {
+  int fd = open(file_name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+  if (fd == -1 && errno != ENOENT)
+    perror("open");
+  log_write_file(log, fd);
+  close(fd);
+}
+
+void print_log(maki_uchi_log_t *log) {
+  if (log_status(log, time(NULL)) == 0) {
+    if (!parseable)
+      printf("%s\n", _[NOT_DONE]);
+    log_entry_t *entry = log_get_last_entry(log);
+    if (entry == NULL)
+      printf("%s\n", _[NEVER]);
+    else
+      printf("%s %s\n", _[LAST], format_stamp(entry->end));
+  } else
+    printf("%s\n", _[DONE]);
+  log_entry_t *first = log_get_first_entry(log);
+  if (first != log_get_last_entry(log))
+    print_skipped(log);
+  if (first != NULL)
+    printf("%s %s\n", _[EARLIEST], format_stamp(first->start));
+}
+
+void parse_args(int argc, char *argv[]) {
   int opt;
   while ((opt = getopt(argc, argv, "pf:")) != -1)
     switch (opt) {
@@ -105,36 +128,23 @@ int main(int argc, char *argv[]) {
       usage();
       break;
     }
+}
+
+int main(int argc, char *argv[]) {
+  maki_uchi_log_t log;
+  log_init(&log);
+  parse_args(argc, argv);
   int fd = open(file_name, O_RDONLY);
   if (fd == -1 && errno != ENOENT)
     perror("open");
   log_read_file(&log, fd);
   close(fd);
   if (optind < argc) {
-    int fd = open(file_name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-    if (fd == -1 && errno != ENOENT)
-      perror("open");
     int count;
     if (sscanf(argv[optind], "%d", &count) != 1)
       usage();
-    log_add(&log, count, now);
-    log_write_file(&log, fd);
-    close(fd);
-  } else {
-    if (log_status(&log, now) == 0) {
-      if (!parseable)
-	printf("%s\n", _[NOT_DONE]);
-      log_entry_t *entry = log_get_last_entry(&log);
-      if (entry == NULL)
-	printf("%s\n", _[NEVER]);
-      else
-	printf("%s %s\n", _[LAST], format_stamp(entry->end));
-    } else
-      printf("%s\n", _[DONE]);
-    log_entry_t *first = log_get_first_entry(&log);
-    if (first != log_get_last_entry(&log))
-      print_skipped(&log);
-    if (first != NULL)
-      printf("%s %s\n", _[EARLIEST], format_stamp(first->start));
-  }
+    log_add(&log, count, time(NULL));
+    store_log(&log);
+  } else
+    print_log(&log);
 }
