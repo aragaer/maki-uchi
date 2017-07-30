@@ -22,7 +22,7 @@ char *format_stamp(time_t value) {
 char *file_name = "test.data";
 int parseable;
 
-enum STRINGS {
+enum string_idx {
   DATE_SEP,
   SKIPPED,
   PERIOD_SEP,
@@ -30,6 +30,8 @@ enum STRINGS {
   NOT_DONE,
   LAST,
   EARLIEST,
+  DONE,
+  NEVER,
 };
 
 const char *human_readable[] = {
@@ -40,6 +42,8 @@ const char *human_readable[] = {
   [NOT_DONE] = "You did not do your maki-uchi today",
   [LAST] = "The last date you did your maki-uchi is",
   [EARLIEST] = "The earliest date you did your maki-uchi is",
+  [DONE] = "You did your maki-uchi today",
+  [NEVER] = "You did not do maki-uchi at all",
 };
 
 const char *computer_readable[] = {
@@ -47,12 +51,13 @@ const char *computer_readable[] = {
   [SKIPPED] = "skipped",
   [PERIOD_SEP] = " ",
   [LAST_PERIOD_SEP] = " ",
-  [NOT_DONE] = "not done",
   [LAST] = "last",
   [EARLIEST] = "earliest",
+  [DONE] = "last today",
+  [NEVER] = "last never",
 };
 
-const char **_ = human_readable;
+const char * const *_ = human_readable;
 
 void print_skipped_between(log_entry_t *before, log_entry_t *after) {
   printf("%s", format_stamp(before->end+1));
@@ -117,14 +122,15 @@ int main(int argc, char *argv[]) {
     close(fd);
   } else {
     if (log_status(&log, now) == 0) {
-      printf("%s\n", _[NOT_DONE]);
+      if (!parseable)
+	printf("%s\n", _[NOT_DONE]);
       log_entry_t *entry = log_get_last_entry(&log);
       if (entry == NULL)
-	printf("You did not do maki-uchi at all\n");
+	printf("%s\n", _[NEVER]);
       else
 	printf("%s %s\n", _[LAST], format_stamp(entry->end));
     } else
-      printf("You did your maki-uchi today\n");
+      printf("%s\n", _[DONE]);
     log_entry_t *first = log_get_first_entry(&log);
     if (first != log_get_last_entry(&log))
       print_skipped(&log);
