@@ -88,3 +88,10 @@ trap cleanup EXIT
 ./maki-uchi -f $test_file 10
 test -e $test_file
 check_string "$(cat $test_file)" "${DATES[0]}"
+
+/bin/echo -e "${DATES[1]}\n${DATES[4]}\n${DATES[7]}\n${DATES[9]}" > $test_file
+cmd="./maki-uchi -f$test_file -p"
+check_cmd_output "$cmd" "not done"
+check_cmd_output "$cmd" "last ${DATES[1]}"
+check_cmd_output "$cmd" "skipped ${DATES[3]}-${DATES[2]} ${DATES[6]}-${DATES[5]} ${DATES[8]}"
+check_cmd_output "$cmd" "earliest ${DATES[9]}"
