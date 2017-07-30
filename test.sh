@@ -1,8 +1,8 @@
-#!/bin/sh -e
+#!/bin/bash -e
 
 check_string() {
     if [ "$1" != "$2" ] ; then
-	/bin/echo -e "Expected '$2'\nGot '$1'"
+	echo -e "Expected '$2'\nGot '$1'"
 	exit 1
     fi
 }
@@ -11,7 +11,7 @@ check_cmd_output() {
     cmd=$1
     output="$2"
     if ! ($cmd | fgrep -q "$output") ; then
-	/bin/echo "'$output' not found in output of '$cmd'"
+	echo "'$output' not found in output of '$cmd'"
 	exit 1
     fi
 }
@@ -33,7 +33,7 @@ echo ${DATES[2]} > test.data
 check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
 check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[2]}"
 result=`./maki-uchi 10`
-/bin/echo -e "${DATES[0]}\n${DATES[2]}" | diff -q - test.data
+echo -e "${DATES[0]}\n${DATES[2]}" | diff -q - test.data
 echo "${DATES[6]}-${DATES[4]}" >> test.data
 check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is ${DATES[6]}"
 
@@ -42,25 +42,25 @@ check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
 check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[4]}"
 check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is ${DATES[6]}"
 
-/bin/echo -e "${DATES[4]}\n${DATES[6]}" > test.data
+echo -e "${DATES[4]}\n${DATES[6]}" > test.data
 check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
 check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[4]}"
 check_cmd_output ./maki-uchi "You skipped ${DATES[5]}"
 check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is ${DATES[6]}"
 
-/bin/echo -e "${DATES[2]}\n${DATES[6]}" > test.data
+echo -e "${DATES[2]}\n${DATES[6]}" > test.data
 check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
 check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[2]}"
 check_cmd_output ./maki-uchi "You skipped ${DATES[5]} to ${DATES[3]}"
 check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is ${DATES[6]}"
 
-/bin/echo -e "${DATES[2]}\n${DATES[4]}\n${DATES[6]}" > test.data
+echo -e "${DATES[2]}\n${DATES[4]}\n${DATES[6]}" > test.data
 check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
 check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[2]}"
 check_cmd_output ./maki-uchi "You skipped ${DATES[3]} and ${DATES[5]}"
 check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is ${DATES[6]}"
 
-/bin/echo -e "${DATES[1]}\n${DATES[4]}\n${DATES[7]}\n${DATES[9]}" > test.data
+echo -e "${DATES[1]}\n${DATES[4]}\n${DATES[7]}\n${DATES[9]}" > test.data
 check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
 check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[1]}"
 check_cmd_output ./maki-uchi "You skipped ${DATES[3]} to ${DATES[2]}, ${DATES[6]} to ${DATES[5]} and ${DATES[8]}"
@@ -91,12 +91,12 @@ check_string "$(cat $test_file)" "${DATES[0]}"
 
 cmd="./maki-uchi -f$test_file -p"
 
-/bin/echo -e "${DATES[1]}\n${DATES[4]}\n${DATES[7]}\n${DATES[9]}" > $test_file
+echo -e "${DATES[1]}\n${DATES[4]}\n${DATES[7]}\n${DATES[9]}" > $test_file
 check_cmd_output "$cmd" "last ${DATES[1]}"
 check_cmd_output "$cmd" "skipped ${DATES[3]}-${DATES[2]} ${DATES[6]}-${DATES[5]} ${DATES[8]}"
 check_cmd_output "$cmd" "earliest ${DATES[9]}"
 
-/bin/echo "${DATES[0]}" > $test_file
+echo "${DATES[0]}" > $test_file
 check_cmd_output "$cmd" "last today"
 
 > $test_file
