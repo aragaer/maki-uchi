@@ -75,6 +75,16 @@ echo ${DATES[1]} > test.data
 check_string $(cat test.data) "${DATES[3]}-${DATES[0]}"
 
 echo ${DATES[1]} > test.data
-./maki-uchi garbage > /dev/null ||:
-check_string $(cat test.data) "${DATES[1]}"
-check_cmd_output "./maki-uchi garbage" "Usage: maki-uchi [number]"
+./maki-uchi garbage 2> /dev/null ||:
+check_string "$(cat test.data)" "${DATES[1]}"
+
+test_file=$(mktemp --tmpdir -u maki-uchiXXXXXX)
+cleanup() {
+    rm -f $test_file
+}
+
+trap cleanup EXIT
+
+./maki-uchi -f $test_file 10
+test -e $test_file
+check_string "$(cat $test_file)" "${DATES[0]}"

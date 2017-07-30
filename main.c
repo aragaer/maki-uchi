@@ -1,6 +1,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -40,24 +42,39 @@ void print_skipped(maki_uchi_log_t *log) {
   printf("\n");
 }
 
+static char *file_name = "test.data";
+
+void usage() {
+  fprintf(stderr, "Usage: maki-uchi [-f filename] [number]\n");
+  exit(EXIT_FAILURE);
+}
+
 int main(int argc, char *argv[]) {
   maki_uchi_log_t log;
   log_init(&log);
   time_t now = time(NULL);
-  int fd = open("test.data", O_RDONLY);
+  int opt;
+  while ((opt = getopt(argc, argv, "f:")) != -1) {
+    switch (opt) {
+    case 'f':
+      file_name = optarg;
+      break;
+    default:
+      usage();
+    }
+  }
+  int fd = open(file_name, O_RDONLY);
   if (fd == -1 && errno != ENOENT)
     perror("open");
   log_read_file(&log, fd);
   close(fd);
-  if (argc == 2) {
-    int fd = open("test.data", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+  if (optind < argc) {
+    int fd = open(file_name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
     if (fd == -1 && errno != ENOENT)
       perror("open");
     int count;
-    if (sscanf(argv[1], "%d", &count) != 1) {
-      printf("Usage: maki-uchi [number]\n");
-      exit(-1);
-    }
+    if (sscanf(argv[optind], "%d", &count) != 1)
+      usage();
     log_add(&log, count, now);
     log_write_file(&log, fd);
     close(fd);
