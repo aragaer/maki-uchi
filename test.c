@@ -236,6 +236,22 @@ static char *test_read4(maki_uchi_log_t *log) {
   return NULL;
 }
 
+static char *test_read5(maki_uchi_log_t *log) {
+  int result;
+  time_t new_stamp;
+  new_stamp = timestamp + ONE_DAY * 2;
+  strftime(buf, sizeof(buf), "%Y.%m.%d 10\n", localtime(&new_stamp));
+
+  result = log_read(log, buf, strlen(buf));
+  printf("[%s] %d\n", buf, result);
+
+  mu_assert("Read success", result == 0);
+  mu_assert("Done for correct day", log_status(log, new_stamp) == 10);
+  mu_assert("Not done for day before", log_status(log, new_stamp - ONE_DAY) == 0);
+  mu_assert("Not done for day after", log_status(log, new_stamp + ONE_DAY) == 0);
+  return NULL;
+}
+
 static char *test_read() {
   maki_uchi_log_t *log = alloca(sizeof(maki_uchi_log_t));
   log_init(log);
@@ -245,6 +261,7 @@ static char *test_read() {
   mu_run_test(test_read2, log);
   mu_run_test(test_read3, log);
   mu_run_test(test_read4, log);
+  mu_run_test(test_read5, log);
 
   log_release(log);
   return NULL;
@@ -392,6 +409,45 @@ static char *test_get_entry_before() {
   return NULL;
 }
 
+static char *test_log_incomplete() {
+  maki_uchi_log_t *log = alloca(sizeof(maki_uchi_log_t));
+  log_init(log);
+  mu_assert("Nothing for day 0", log_status(log, timestamp) == 0);
+  debug("Doing 7 maki-uchi on day 0\n");
+  log_add(log, 7, timestamp);
+  mu_assert("Just 7 for day 0", log_status(log, timestamp) == 7);
+  mu_assert("Not done for day -1", log_status(log, timestamp - ONE_DAY) == 0);
+  mu_assert("Not done for day 1", log_status(log, timestamp + ONE_DAY) == 0);
+  log_add(log, 10, timestamp + ONE_DAY);
+  debug("Doing 10 maki-uchi on day 1\n");
+  mu_assert("Just 7 for day 0", log_status(log, timestamp) == 7);
+  mu_assert("Not done for day -1", log_status(log, timestamp - ONE_DAY) == 0);
+  mu_assert("Done for day 1", log_status(log, timestamp + ONE_DAY) == 10);
+  log_add(log, 5, timestamp + ONE_DAY * 2);
+  log_add(log, 11, timestamp + ONE_DAY * 3);
+  mu_assert("Just 6 for day 2", log_status(log, timestamp + ONE_DAY * 2) == 6);
+  log_add(log, 17, timestamp + ONE_DAY * 4);
+  int i;
+  for (i = 0; i < 4; i++)
+    mu_assert("Done", log_status(log, timestamp + ONE_DAY * i) == 10);
+  log_release(log);
+  return NULL;
+}
+
+static char *test_log_incomplete_split() {
+  maki_uchi_log_t *log = alloca(sizeof(maki_uchi_log_t));
+  log_init(log);
+  log_add(log, 5, timestamp);
+  log_add(log, 5, timestamp + ONE_DAY);
+  mu_assert("Just 5 for day 0", log_status(log, timestamp) == 5);
+  mu_assert("Just 5 for day 1", log_status(log, timestamp + ONE_DAY) == 5);
+  log_add(log, 11, timestamp + ONE_DAY * 2);
+  mu_assert("Just 5 for day 0", log_status(log, timestamp) == 5);
+  mu_assert("Just 6 for day 1", log_status(log, timestamp + ONE_DAY) == 6);
+  log_release(log);
+  return NULL;
+}
+
 static char *all_tests() {
   mu_run_test(test_log);
   mu_run_test(test_one_day);
@@ -407,6 +463,8 @@ static char *all_tests() {
   mu_run_test(test_get_last_entry);
   mu_run_test(test_get_first_entry);
   mu_run_test(test_get_entry_before);
+  mu_run_test(test_log_incomplete);
+  mu_run_test(test_log_incomplete_split);
   return NULL;
 }
  
