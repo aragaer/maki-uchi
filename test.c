@@ -240,15 +240,35 @@ static char *test_read5(maki_uchi_log_t *log) {
   int result;
   time_t new_stamp;
   new_stamp = timestamp + ONE_DAY * 2;
-  strftime(buf, sizeof(buf), "%Y.%m.%d 10\n", localtime(&new_stamp));
+  strftime(buf, sizeof(buf), "%Y.%m.%d 9\n", localtime(&new_stamp));
 
   result = log_read(log, buf, strlen(buf));
-  printf("[%s] %d\n", buf, result);
 
   mu_assert("Read success", result == 0);
-  mu_assert("Done for correct day", log_status(log, new_stamp) == 10);
+  mu_assert("Done for correct day", log_status(log, new_stamp) == 9);
   mu_assert("Not done for day before", log_status(log, new_stamp - ONE_DAY) == 0);
   mu_assert("Not done for day after", log_status(log, new_stamp + ONE_DAY) == 0);
+  return NULL;
+}
+
+static char *test_read6(maki_uchi_log_t *log) {
+  int result;
+  time_t new_stamp;
+
+  new_stamp = timestamp + ONE_DAY * 2;
+  strftime(buf, sizeof(buf), "%Y.%m.%d", localtime(&timestamp));
+  strftime(buf+strlen(buf), sizeof(buf)-strlen(buf), "-%Y.%m.%d 8\n", localtime(&new_stamp));
+
+  result = log_read(log, buf, strlen(buf));
+
+  printf("Reading [%s] %ld\n", buf, new_stamp);
+  dump_log(log);
+  mu_assert("Read success", result == 0);
+  int i;
+  for (i = 0; i < 3; i++)
+    mu_assert("Done for correct day", log_status(log, timestamp + i * ONE_DAY) == 8);
+  mu_assert("Not done for day after", log_status(log, timestamp + i * ONE_DAY) == 0);
+  mu_assert("Not done for two days before", log_status(log, timestamp - ONE_DAY) == 0);
   return NULL;
 }
 
@@ -262,6 +282,7 @@ static char *test_read() {
   mu_run_test(test_read3, log);
   mu_run_test(test_read4, log);
   mu_run_test(test_read5, log);
+  mu_run_test(test_read6, log);
 
   log_release(log);
   return NULL;

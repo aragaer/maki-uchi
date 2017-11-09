@@ -167,6 +167,7 @@ typedef enum {
   BEGIN,
   ONE_DATE,
   SECOND_DATE,
+  COUNT,
   EOL,
   END,
 } reader_state;
@@ -194,13 +195,13 @@ static void read_date(struct read_runner *this) {
       this->entry->start = mktime(this->tm);
       this->state = ONE_DATE;
     } else
-      this->state = EOL;
+      this->state = COUNT;
   }
 }
 
 static void read_hyphen(struct read_runner *this) {
   if (this->data_left == 0 || *this->ptr != '-')
-    this->state = EOL;
+    this->state = COUNT;
   else {
     this->ptr++;
     this->data_left--;
@@ -210,7 +211,6 @@ static void read_hyphen(struct read_runner *this) {
 
 static void read_eol(struct read_runner *this) {
   this->entry->end = mktime(this->tm) + ONE_DAY - 1;
-  this->entry->count = DAILY_REQUIREMENT;
   insert_entry(this->log, this->entry);
   this->entry = NULL;
   if (this->data_left <= 0 || *this->ptr != '\n')
@@ -222,10 +222,31 @@ static void read_eol(struct read_runner *this) {
   }
 }
 
+static void read_count(struct read_runner *this) {
+  if (this->data_left < 1 || *this->ptr != ' ') {
+    // old format - no count
+    this->state = EOL;
+    this->entry->count = DAILY_REQUIREMENT;
+  } else {
+    char count_buf[this->data_left + 1];
+    memcpy(count_buf, this->ptr, this->data_left);
+    count_buf[this->data_left] = 0;
+    int bytes;
+    if (sscanf(count_buf, " %d%n", &this->entry->count, &bytes) != 1)
+      this->state = END;
+    else {
+      this->state = EOL;
+      this->ptr += bytes;
+      this->data_left -= bytes;
+    }
+  }
+}
+
 void (*sm[])(struct read_runner *) = {
   [BEGIN] = read_date,
   [ONE_DATE] = read_hyphen,
   [SECOND_DATE] = read_date,
+  [COUNT] = read_count,
   [EOL] = read_eol,
 };
 
