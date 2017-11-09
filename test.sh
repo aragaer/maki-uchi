@@ -66,6 +66,20 @@ check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[1]
 check_cmd_output ./maki-uchi "You skipped ${DATES[3]} to ${DATES[2]}, ${DATES[6]} to ${DATES[5]} and ${DATES[8]}"
 check_cmd_output ./maki-uchi "The earliest date you did your maki-uchi is ${DATES[9]}"
 
+echo -e "${DATES[0]} 6" > test.data
+check_cmd_output ./maki-uchi "You only did 6 maki-uchi today"
+check_cmd_output ./maki-uchi "You should do 4 more maki-uchi"
+
+echo -e "${DATES[1]} 6" > test.data
+check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
+check_cmd_output ./maki-uchi "You only did 6 maki-uchi on ${DATES[1]}"
+check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[1]}"
+
+echo -e "${DATES[1]} 6\n${DATES[3]} 6" > test.data
+check_cmd_output ./maki-uchi "You did not do your maki-uchi today"
+check_cmd_output ./maki-uchi "You only did 6 maki-uchi on ${DATES[1]}, ${DATES[3]}"
+check_cmd_output ./maki-uchi "The last date you did your maki-uchi is ${DATES[1]}"
+
 > test.data
 ./maki-uchi 20
 check_string "$(cat test.data)" "${DATES[1]}-${DATES[0]} 10"

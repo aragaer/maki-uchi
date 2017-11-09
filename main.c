@@ -32,6 +32,11 @@ enum string_idx {
   EARLIEST,
   DONE,
   NEVER,
+  INCOMPLETE,
+  INCOMPLETE2,
+  INCOMPLETE3,
+  MISSING1,
+  MISSING2,
 };
 
 const char *human_readable[] = {
@@ -44,6 +49,11 @@ const char *human_readable[] = {
   [EARLIEST] = "The earliest date you did your maki-uchi is",
   [DONE] = "You did your maki-uchi today",
   [NEVER] = "You did not do maki-uchi at all",
+  [INCOMPLETE] = "You only did",
+  [INCOMPLETE2] = "maki-uchi today",
+  [INCOMPLETE3] = "maki-uchi on",
+  [MISSING1] = "You should do",
+  [MISSING2] = "more maki-uchi",
 };
 
 const char *computer_readable[] = {
@@ -55,14 +65,16 @@ const char *computer_readable[] = {
   [EARLIEST] = "earliest",
   [DONE] = "last today",
   [NEVER] = "last never",
+  [INCOMPLETE] = "only",
+  [INCOMPLETE3] = "on",
 };
 
 const char * const *_ = human_readable;
 
-void print_skipped_between(log_entry_t *before, log_entry_t *after) {
-  printf("%s", format_stamp(before->end+1));
-  if (after->start != before->end + ONE_DAY + 1)
-    printf("%s%s", _[DATE_SEP], format_stamp(after->start-1));
+void print_period(time_t start, time_t end) {
+  printf("%s", format_stamp(start+1));
+  if (end > start + 1 + ONE_DAY)
+    printf("%s%s", _[DATE_SEP], format_stamp(end-1));
 }
 
 void print_skipped(maki_uchi_log_t *log) {
@@ -71,7 +83,7 @@ void print_skipped(maki_uchi_log_t *log) {
   log_entry_t *earliest = log_get_first_entry(log);
   printf("%s ", _[SKIPPED]);
   while (next) {
-    print_skipped_between(next, entry);
+    print_period(next->end, entry->start);
     entry = next;
     next = log_get_entry_before(log, entry);
     if (next == earliest)
@@ -80,6 +92,32 @@ void print_skipped(maki_uchi_log_t *log) {
       printf("%s", _[PERIOD_SEP]);
   }
   printf("\n");
+}
+
+void print_incomplete(maki_uchi_log_t *log) {
+  int count;
+  for (count = 1; count < DAILY_REQUIREMENT; count++) {
+    log_entry_t *entry = log_get_entry_before(log, NULL);
+    int header_printed = 0;
+    while (entry) {
+      if (entry->count == count) {
+	time_t displayed_end = entry->end;
+	if (!parseable && time(NULL) < displayed_end) // already printed as today count
+	  displayed_end -= ONE_DAY;
+	if (entry->start < displayed_end) {
+	  if (header_printed == 0) {
+	    printf("%s %d %s ", _[INCOMPLETE], count, _[INCOMPLETE3]);
+	    header_printed = 1;
+	  } else
+	    printf("%s", _[PERIOD_SEP]);
+	  print_period(entry->start, displayed_end);
+	}
+      }
+      entry = log_get_entry_before(log, entry);
+    }
+    if (header_printed)
+      printf("\n");
+  }
 }
 
 void usage() {
@@ -96,7 +134,8 @@ void store_log(maki_uchi_log_t *log) {
 }
 
 void print_log(maki_uchi_log_t *log) {
-  if (log_status(log, time(NULL)) == 0) {
+  int today_count = log_status(log, time(NULL));
+  if (today_count == 0) {
     if (!parseable)
       printf("%s\n", _[NOT_DONE]);
     log_entry_t *entry = log_get_last_entry(log);
@@ -104,11 +143,15 @@ void print_log(maki_uchi_log_t *log) {
       printf("%s\n", _[NEVER]);
     else
       printf("%s %s\n", _[LAST], format_stamp(entry->end));
-  } else
+  } else if (today_count == DAILY_REQUIREMENT)
     printf("%s\n", _[DONE]);
+  else if (!parseable)
+    printf("%s %d %s\n%s %d %s\n", _[INCOMPLETE], today_count, _[INCOMPLETE2],
+	   _[MISSING1], DAILY_REQUIREMENT - today_count, _[MISSING2]);
   log_entry_t *first = log_get_first_entry(log);
   if (first != log_get_last_entry(log))
     print_skipped(log);
+  print_incomplete(log);
   if (first != NULL)
     printf("%s %s\n", _[EARLIEST], format_stamp(first->start));
 }
