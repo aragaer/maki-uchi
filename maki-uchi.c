@@ -155,8 +155,8 @@ size_t log_write(maki_uchi_log_t *log, char *buf, size_t bufsize) {
       localtime_r(&last_day, &tm);
       result += strftime(buf+result, bufsize-result, "-%Y.%m.%d", &tm);
     }
+    result += snprintf(buf+result, bufsize-result, " %d\n", entry->count);
     if (result < bufsize) {
-      buf[result++] = '\n';
       buf[result] = '\0';
     }
   }
@@ -291,6 +291,12 @@ size_t log_write_file(maki_uchi_log_t *log, int fd) {
       file_size += DATE_LEN + 1;
     else
       file_size += DATE_LEN + 1 + DATE_LEN + 1;
+    int c = entry->count;
+    file_size++;
+    while (c) {
+      file_size++;
+      c /= 10;
+    }
   }
   ftruncate(fd, file_size);
   if (file_size == 0)

@@ -131,16 +131,17 @@ static char *test_serialize() {
   mu_assert("Empty log", result == 0 && strcmp(buf, expected) == 0);
 
   log_add(log, 10, timestamp);
-  strftime(expected, sizeof(expected), "%Y.%m.%d\n", localtime(&timestamp));
+  strftime(expected, sizeof(expected), "%Y.%m.%d 10\n", localtime(&timestamp));
 
   result = log_write(log, buf, sizeof(buf));
 
+  debug("Expecting:\n===\n%s===\nGot:\n===\n%s===\n", expected, buf);
   mu_assert("One record", result == strlen(expected) && strcmp(buf, expected) == 0);
 
   new_stamp = timestamp + ONE_DAY;
   log_add(log, 10, new_stamp);
   result = strftime(expected, sizeof(expected), "%Y.%m.%d", localtime(&timestamp));
-  strftime(expected+result, sizeof(expected)-result, "-%Y.%m.%d\n", localtime(&new_stamp));
+  strftime(expected+result, sizeof(expected)-result, "-%Y.%m.%d 10\n", localtime(&new_stamp));
 
   result = log_write(log, buf, sizeof(buf));
   debug("Expecting:\n===\n%s===\nGot:\n===\n%s===\n", expected, buf);
@@ -150,7 +151,7 @@ static char *test_serialize() {
   new_stamp = timestamp + ONE_DAY * 3;
   log_add(log, 10, new_stamp);
   strcpy(expected, buf);
-  strftime(expected, sizeof(expected), "%Y.%m.%d\n", localtime(&new_stamp));
+  strftime(expected, sizeof(expected), "%Y.%m.%d 10\n", localtime(&new_stamp));
   strcat(expected, buf);
 
   result = log_write(log, buf, sizeof(buf));
@@ -160,7 +161,7 @@ static char *test_serialize() {
 
   log_add(log, 10, new_stamp);
   result = strftime(expected, sizeof(expected), "%Y.%m.%d", localtime(&timestamp));
-  strftime(expected+result, sizeof(expected)-result, "-%Y.%m.%d\n", localtime(&new_stamp));
+  strftime(expected+result, sizeof(expected)-result, "-%Y.%m.%d 10\n", localtime(&new_stamp));
 
   result = log_write(log, buf, sizeof(buf));
   debug("Expecting:\n===\n%s===\nGot:\n===\n%s===\n", expected, buf);
@@ -335,21 +336,21 @@ static char *test_write_file() {
   log_read(log, "1970.01.01", 10);
   lseek(fd, 0, SEEK_SET);
   result = log_write_file(log, fd);
-  mu_assert("Write 2 success", result == 11);
+  mu_assert("Write 2 success", result == 14);
   mu_assert("File has correct size", lseek(fd, 0, SEEK_END) == result);
   void *data = mmap(NULL, result, PROT_READ, MAP_PRIVATE, fd, 0);
   mu_assert("mmap success", data != NULL);
-  mu_assert("File has correct contents", memcmp(data, "1970.01.01\n", result) == 0);
+  mu_assert("File has correct contents", memcmp(data, "1970.01.01 10\n", result) == 0);
 
   log_read(log, "1970.01.01-1970.01.02", 21);
   lseek(fd, 0, SEEK_SET);
   result = log_write_file(log, fd);
-  mu_assert("Write 3 success", result == 22);
+  mu_assert("Write 3 success", result == 25);
   mu_assert("File has correct size", lseek(fd, 0, SEEK_END) == result);
   data = mmap(NULL, result, PROT_READ, MAP_PRIVATE, fd, 0);
   mu_assert("mmap success", data != NULL);
   mu_assert("File has correct contents",
-	    memcmp(data, "1970.01.01-1970.01.02\n", result) == 0);
+	    memcmp(data, "1970.01.01-1970.01.02 10\n", result) == 0);
 
   close(fd);
   unlink(filename);
