@@ -3,11 +3,9 @@
 
 #include <time.h>
 
-#define DAILY_REQUIREMENT 10
+#include "list.h"
 
-struct list_head {
-  struct list_head *prev, *next;
-};
+#define DAILY_REQUIREMENT 10
 
 typedef struct log_entry_s {
   struct list_head list;

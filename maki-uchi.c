@@ -11,18 +11,6 @@
 
 #define ONE_DAY (24 * 60 * 60)
 
-#define container_of(ptr, type, member) ({                      \
-      const typeof( ((type *)0)->member ) *__mptr = (ptr);	\
-      (type *)( (char *)__mptr - offsetof(type,member) );})
-
-void list_init(struct list_head *list) {
-  list->next = list->prev = list;
-}
-
-int list_is_empty(struct list_head *list) {
-  return list->next == list;
-}
-
 void log_init(maki_uchi_log_t *log) {
   list_init(&log->head);
 }
@@ -65,19 +53,6 @@ static struct log_entry_s *alloc_entry() {
     exit(-1);
   }
   return result;
-}
-
-static void list_insert_before(struct list_head *new, struct list_head *old) {
-  new->next = old;
-  new->prev = old->prev;
-  new->prev->next = new;
-  old->prev = new;
-}
-
-static void list_remove_item(struct list_head *item) {
-  struct list_head *next = item->next;
-  next->prev = item->prev;
-  next->prev->next = next;
 }
 
 static void merge_entries(maki_uchi_log_t *log) {

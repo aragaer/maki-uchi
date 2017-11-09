@@ -7,9 +7,9 @@ test: maki-uchi-test maki-uchi
 	./test.sh
 
 maki-uchi-test: CPPFLAGS += -DDEBUG
-maki-uchi-test: test.o maki-uchi.o
+maki-uchi-test: test.o maki-uchi.o list.o
 
-maki-uchi: main.c maki-uchi.o
+maki-uchi: main.c maki-uchi.o list.o
 
 maki-uchi maki-uchi-test:
 	$(CC) -o $@ $^
