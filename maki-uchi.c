@@ -81,26 +81,30 @@ static void insert_entry(maki_uchi_log_t *log, struct log_entry_s *new_entry) {
   merge_entries(log);
 }
 
+static struct log_entry_s *create_entry(time_t start, time_t end, int count) {
+  struct log_entry_s *result = alloc_entry();
+  result->start = start;
+  result->end = end;
+  result->count = count;
+  return result;
+}
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
 void log_add(maki_uchi_log_t *log, int count, time_t timestamp) {
   for (; count > 0; timestamp -= ONE_DAY) {
     struct log_entry_s *entry = find_entry(log, timestamp);
     if (entry == NULL) {
-      entry = alloc_entry();
-      entry->count = count > DAILY_REQUIREMENT ? DAILY_REQUIREMENT : count;
+      time_t start = timestamp - timestamp % ONE_DAY;
+      time_t end = start + ONE_DAY - 1;
+      insert_entry(log, create_entry(start, end, MIN(count, DAILY_REQUIREMENT)));
       count -= DAILY_REQUIREMENT;
-      entry->start = timestamp - timestamp % ONE_DAY;
-      entry->end = entry->start + ONE_DAY - 1;
-      insert_entry(log, entry);
     } else if (entry->count < DAILY_REQUIREMENT) {
-      int missing = DAILY_REQUIREMENT - entry->count;
-      int added = missing > count ? count : missing;
+      int added = MIN(DAILY_REQUIREMENT - entry->count, count);
       if (entry->end - entry->start > ONE_DAY) {
-	struct log_entry_s *new_entry = alloc_entry();
-	new_entry->end = entry->end;
+	insert_entry(log, create_entry(entry->end - ONE_DAY + 1,
+				       entry->end, entry->count + added));
 	entry->end -= ONE_DAY;
-	new_entry->start = entry->end + 1;
-	new_entry->count = entry->count + added;
-	insert_entry(log, new_entry);
       } else
 	entry->count += added;
       count -= added;
