@@ -5,6 +5,7 @@
 
 #include "entry.h"
 #include "log.h"
+#include "reader.h"
 
 #define DAILY_REQUIREMENT 10
 
@@ -13,8 +14,5 @@ size_t log_write(maki_uchi_log_t *log, char *buf, size_t bufsize);
 int log_read(maki_uchi_log_t *log, char *buf, size_t buflen);
 size_t log_read_file(maki_uchi_log_t *log, int fd);
 size_t log_write_file(maki_uchi_log_t *log, int fd);
-log_entry_t *log_get_last_entry(maki_uchi_log_t *log);
-log_entry_t *log_get_first_entry(maki_uchi_log_t *log);
-log_entry_t *log_get_entry_before(maki_uchi_log_t *log, log_entry_t *entry);
 
 #endif  // _MAKI_UCHI_H_

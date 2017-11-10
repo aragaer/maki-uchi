@@ -1,4 +1,3 @@
-#define _XOPEN_SOURCE 500
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,23 +12,28 @@
 #define ONE_DAY (24 * 60 * 60)
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define DAYS(e) (((e)->end - (e)->start)/ONE_DAY)
+
+static void insert_one_day_entry(maki_uchi_log_t *log, time_t start, int count) {
+  time_t end = start + ONE_DAY - 1;
+  insert_entry(log, create_entry(start, end, count));
+}
+
+static inline time_t round_to_day_start(time_t timestamp) {
+  return timestamp - timestamp % ONE_DAY;
+}
 
 void log_add(maki_uchi_log_t *log, int count, time_t timestamp) {
   while (count > 0) {
     struct log_entry_s *entry = find_entry(log, timestamp);
     if (entry == NULL) {
-      time_t start = timestamp - timestamp % ONE_DAY;
-      time_t end = start + ONE_DAY - 1;
-      insert_entry(log, create_entry(start, end, MIN(count, DAILY_REQUIREMENT)));
+      insert_one_day_entry(log, round_to_day_start(timestamp), MIN(count, DAILY_REQUIREMENT));
       count -= DAILY_REQUIREMENT;
       timestamp -= ONE_DAY;
     } else if (entry->count < DAILY_REQUIREMENT) {
       int missing = DAILY_REQUIREMENT - entry->count;
       int added = MIN(missing, count);
-      if (entry->end - entry->start > ONE_DAY) {
-	insert_entry(log, create_entry(entry->end - ONE_DAY + 1,
-				       entry->end, entry->count + added));
+      if (DAYS(entry) > 1) {
+	insert_one_day_entry(log, entry->end - ONE_DAY + 1, entry->count + added);
 	entry->end -= ONE_DAY;
       } else
 	entry->count += added;
@@ -61,93 +65,6 @@ size_t log_write(maki_uchi_log_t *log, char *buf, size_t bufsize) {
   return result;
 }
 
-typedef enum {
-  BEGIN,
-  ONE_DATE,
-  SECOND_DATE,
-  COUNT,
-  EOL,
-  END,
-} reader_state;
-
-struct read_runner {
-  char *ptr;
-  struct tm *tm;
-  struct log_entry_s *entry;
-  maki_uchi_log_t *log;
-  size_t data_left;
-  reader_state state;
-};
-
-#define DATE_LEN 10
-
-static void read_date(struct read_runner *this) {
-  if (this->data_left < DATE_LEN
-      || strptime(this->ptr, "%Y.%m.%d", this->tm) == NULL) {
-    this->state = END;
-  } else {
-    this->ptr += DATE_LEN;
-    this->data_left -= DATE_LEN;
-    if (this->state == BEGIN) {
-      this->entry = alloc_entry();
-      this->entry->start = mktime(this->tm);
-      this->state = ONE_DATE;
-    } else
-      this->state = COUNT;
-  }
-}
-
-static void read_hyphen(struct read_runner *this) {
-  if (this->data_left == 0 || *this->ptr != '-')
-    this->state = COUNT;
-  else {
-    this->ptr++;
-    this->data_left--;
-    this->state = SECOND_DATE;
-  }
-}
-
-static void read_eol(struct read_runner *this) {
-  this->entry->end = mktime(this->tm) + ONE_DAY - 1;
-  insert_entry(this->log, this->entry);
-  this->entry = NULL;
-  if (this->data_left <= 0 || *this->ptr != '\n')
-    this->state = END;
-  else {
-    this->ptr++;
-    this->data_left--;
-    this->state = BEGIN;
-  }
-}
-
-static void read_count(struct read_runner *this) {
-  if (this->data_left < 1 || *this->ptr != ' ') {
-    // old format - no count
-    this->state = EOL;
-    this->entry->count = DAILY_REQUIREMENT;
-  } else {
-    char count_buf[this->data_left + 1];
-    memcpy(count_buf, this->ptr, this->data_left);
-    count_buf[this->data_left] = 0;
-    int bytes;
-    if (sscanf(count_buf, " %d%n", &this->entry->count, &bytes) != 1)
-      this->state = END;
-    else {
-      this->state = EOL;
-      this->ptr += bytes;
-      this->data_left -= bytes;
-    }
-  }
-}
-
-void (*sm[])(struct read_runner *) = {
-  [BEGIN] = read_date,
-  [ONE_DATE] = read_hyphen,
-  [SECOND_DATE] = read_date,
-  [COUNT] = read_count,
-  [EOL] = read_eol,
-};
-
 int log_read(maki_uchi_log_t *log, char *buf, size_t buflen) {
   time_t base = 0;
   struct tm tm;
@@ -162,7 +79,7 @@ int log_read(maki_uchi_log_t *log, char *buf, size_t buflen) {
     .log = log,
   };
   while (reader.state != END)
-    sm[reader.state](&reader);
+    reader_step(&reader);
   free(reader.entry);
   return reader.data_left ? -1 : 0;
 }
@@ -179,6 +96,8 @@ size_t log_read_file(maki_uchi_log_t *log, int fd) {
   munmap(data, len);
   return result == 0 ? len : -1;
 }
+
+#define DATE_LEN 10
 
 size_t log_write_file(maki_uchi_log_t *log, int fd) {
   size_t file_size = 0;
@@ -213,26 +132,4 @@ size_t log_write_file(maki_uchi_log_t *log, int fd) {
   free(buf);
   munmap(data, file_size);
   return file_size;
-}
-
-struct log_entry_s *log_get_last_entry(maki_uchi_log_t *log) {
-  if (list_is_empty(&log->head))
-    return NULL;
-  return container_of(log->head.next, struct log_entry_s, list);
-}
-
-struct log_entry_s *log_get_first_entry(maki_uchi_log_t *log) {
-  if (list_is_empty(&log->head))
-    return NULL;
-  return container_of(log->head.prev, struct log_entry_s, list);
-}
-
-struct log_entry_s *log_get_entry_before(maki_uchi_log_t *log,
-					 struct log_entry_s *entry) {
-  if (entry == NULL)
-    return log_get_last_entry(log);
-  struct list_head *next = entry->list.next;
-  if (next == &log->head)
-    return NULL;
-  return container_of(next, struct log_entry_s, list);
 }

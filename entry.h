@@ -9,6 +9,8 @@ typedef struct log_entry_s {
   time_t start, end;
 } log_entry_t;
 
+#define DAYS(e) (((e)->end - (e)->start + 1)/ONE_DAY)
+
 struct log_entry_s *alloc_entry();
 struct log_entry_s *create_entry(time_t start, time_t end, int count);
 int match(struct log_entry_s *entry, time_t timestamp);

@@ -1,6 +1,6 @@
 CFLAGS := -Wall -Wextra -Werror
 
-COMMON_O = maki-uchi.o list.o log.o entry.o
+COMMON_O = maki-uchi.o list.o log.o entry.o reader.o
 
 all: maki-uchi
 

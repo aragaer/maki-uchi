@@ -70,3 +70,25 @@ void dump_log(maki_uchi_log_t *log) {
 	   entry->end, entry->count, item->prev, item->next);
   }
 }
+
+struct log_entry_s *log_get_last_entry(maki_uchi_log_t *log) {
+  if (list_is_empty(&log->head))
+    return NULL;
+  return container_of(log->head.next, struct log_entry_s, list);
+}
+
+struct log_entry_s *log_get_first_entry(maki_uchi_log_t *log) {
+  if (list_is_empty(&log->head))
+    return NULL;
+  return container_of(log->head.prev, struct log_entry_s, list);
+}
+
+struct log_entry_s *log_get_entry_before(maki_uchi_log_t *log,
+					 struct log_entry_s *entry) {
+  if (entry == NULL)
+    return log_get_last_entry(log);
+  struct list_head *next = entry->list.next;
+  if (next == &log->head)
+    return NULL;
+  return container_of(next, struct log_entry_s, list);
+}

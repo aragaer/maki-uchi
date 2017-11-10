@@ -17,6 +17,10 @@ void merge_entries(maki_uchi_log_t *log);
 void insert_entry(maki_uchi_log_t *log, struct log_entry_s *entry);
 struct log_entry_s *find_entry(maki_uchi_log_t *log, time_t timestamp);
 
+log_entry_t *log_get_last_entry(maki_uchi_log_t *log);
+log_entry_t *log_get_first_entry(maki_uchi_log_t *log);
+log_entry_t *log_get_entry_before(maki_uchi_log_t *log, log_entry_t *entry);
+
 #ifdef DEBUG
 void dump_log(maki_uchi_log_t *log);
 #endif
