@@ -44,24 +44,27 @@ void log_add(maki_uchi_log_t *log, int count, time_t timestamp) {
   }
 }
 
-size_t log_write(maki_uchi_log_t *log, char *buf, size_t bufsize) {
+static size_t write_entry(struct log_entry_s *entry, char *buf, size_t bufsize) {
   struct tm tm;
-  struct list_head *item;
-  size_t result = 0;
-  for (item = log->head.next; item != &log->head; item = item->next) {
-    struct log_entry_s *entry = container_of(item, struct log_entry_s, list);
-    localtime_r(&entry->start, &tm);
-    result += strftime(buf+result, bufsize-result, "%Y.%m.%d", &tm);
-    if (entry->end - entry->start > ONE_DAY) {
-      time_t last_day = entry->end - ONE_DAY + 1;
-      localtime_r(&last_day, &tm);
-      result += strftime(buf+result, bufsize-result, "-%Y.%m.%d", &tm);
-    }
-    result += snprintf(buf+result, bufsize-result, " %d\n", entry->count);
-    if (result < bufsize) {
-      buf[result] = '\0';
-    }
+  localtime_r(&entry->start, &tm);
+  size_t result = strftime(buf, bufsize, "%Y.%m.%d", &tm);
+  if (DAYS(entry) > 1) {
+    time_t last_day = entry->end - ONE_DAY + 1;
+    localtime_r(&last_day, &tm);
+    result += strftime(buf+result, bufsize-result, "-%Y.%m.%d", &tm);
   }
+  result += snprintf(buf+result, bufsize-result, " %d\n", entry->count);
+  return result;
+}
+
+size_t log_write(maki_uchi_log_t *log, char *buf, size_t bufsize) {
+  size_t result = 0;
+  struct list_head *item;
+  for (item = log->head.next; item != &log->head; item = item->next)
+    result += write_entry(from_list_head(item),
+			  buf+result, bufsize-result);
+  if (result < bufsize)
+    buf[result] = '\0';
   return result;
 }
 
@@ -98,38 +101,48 @@ size_t log_read_file(maki_uchi_log_t *log, int fd) {
 }
 
 #define DATE_LEN 10
+#define SPACE_LEN 1
+#define NEWLINE_LEN 1
+#define DATE_SEP_LEN 1
+
+static size_t number_len(int number) {
+  int result = 0;
+  while (number) {
+    result++;
+    number /= 10;
+  }
+  return result;
+}
+
+static size_t calculate_entry_size(struct log_entry_s *entry) {
+  size_t result = DATE_LEN;
+  if (DAYS(entry) > 1)
+    result += DATE_SEP_LEN + DATE_LEN;
+  result += SPACE_LEN + number_len(entry->count);
+  result += NEWLINE_LEN;
+  return result;
+}
+
+static size_t calculate_file_size(maki_uchi_log_t *log) {
+  size_t result = 0;
+  struct list_head *item;
+  for (item = log->head.next; item != &log->head; item = item->next)
+    result += calculate_entry_size(from_list_head(item));
+  return result;
+}
 
 size_t log_write_file(maki_uchi_log_t *log, int fd) {
-  size_t file_size = 0;
-  struct list_head *item;
-  for (item = log->head.next; item != &log->head; item = item->next) {
-    struct log_entry_s *entry = container_of(item, struct log_entry_s, list);
-    if (entry->end == entry->start + ONE_DAY - 1)
-      file_size += DATE_LEN + 1;
-    else
-      file_size += DATE_LEN + 1 + DATE_LEN + 1;
-    int c = entry->count;
-    file_size++;
-    while (c) {
-      file_size++;
-      c /= 10;
-    }
-  }
+  size_t file_size = calculate_file_size(log);
   ftruncate(fd, file_size);
   if (file_size == 0)
     return 0;
-  char *buf = malloc(file_size + 1);
-  if (buf == NULL)
-    return -1;
-  log_write(log, buf, file_size + 1);
-  void *data = mmap(NULL, file_size, PROT_WRITE, MAP_SHARED, fd, 0);
+  char *data = mmap(NULL, file_size, PROT_WRITE, MAP_SHARED, fd, 0);
   if (data == MAP_FAILED) {
     perror("map");
-    free(buf);
     return -1;
   }
-  memcpy(data, buf, file_size);
-  free(buf);
+  log_write(log, data, file_size);
+  data[file_size - 1] = '\n';  // with this exact size last byte is equal to '\0'
   munmap(data, file_size);
   return file_size;
 }

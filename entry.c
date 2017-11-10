@@ -23,3 +23,7 @@ struct log_entry_s *create_entry(time_t start, time_t end, int count) {
 int match(struct log_entry_s *entry, time_t timestamp) {
   return timestamp >= entry->start && timestamp <= entry->end;
 }
+
+struct log_entry_s *from_list_head(struct list_head *item) {
+  return container_of(item, struct log_entry_s, list);
+}
