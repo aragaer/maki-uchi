@@ -1,5 +1,7 @@
 CFLAGS := -Wall -Wextra -Werror
 
+COMMON_O = maki-uchi.o list.o log.o entry.o
+
 all: maki-uchi
 
 test: maki-uchi-test maki-uchi
@@ -7,9 +9,9 @@ test: maki-uchi-test maki-uchi
 	./test.sh
 
 maki-uchi-test: CPPFLAGS += -DDEBUG
-maki-uchi-test: test.o maki-uchi.o list.o
+maki-uchi-test: test.o $(COMMON_O)
 
-maki-uchi: main.c maki-uchi.o list.o
+maki-uchi: main.c $(COMMON_O)
 
 maki-uchi maki-uchi-test:
 	$(CC) -o $@ $^

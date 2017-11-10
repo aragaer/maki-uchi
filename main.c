@@ -99,22 +99,20 @@ void print_incomplete(maki_uchi_log_t *log) {
   for (count = 1; count < DAILY_REQUIREMENT; count++) {
     log_entry_t *entry = log_get_entry_before(log, NULL);
     int header_printed = 0;
-    while (entry) {
+    for (; entry; entry = log_get_entry_before(log, entry))
       if (entry->count == count) {
 	time_t displayed_end = entry->end;
 	if (!parseable && time(NULL) < displayed_end) // already printed as today count
 	  displayed_end -= ONE_DAY;
-	if (entry->start < displayed_end) {
-	  if (header_printed == 0) {
-	    printf("%s %d %s ", _[INCOMPLETE], count, _[INCOMPLETE3]);
-	    header_printed = 1;
-	  } else
-	    printf("%s", _[PERIOD_SEP]);
-	  print_period(entry->start, displayed_end);
-	}
+	if (entry->start > displayed_end)
+	  continue;
+	if (header_printed)
+	  printf("%s", _[PERIOD_SEP]);
+	else
+	  printf("%s %d %s ", _[INCOMPLETE], count, _[INCOMPLETE3]);
+	header_printed = 1;
+	print_period(entry->start, displayed_end);
       }
-      entry = log_get_entry_before(log, entry);
-    }
     if (header_printed)
       printf("\n");
   }
