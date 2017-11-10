@@ -5,7 +5,6 @@
 
 #include "entry.h"
 #include "log.h"
-#include "reader.h"
 
 #define DAILY_REQUIREMENT 10
 

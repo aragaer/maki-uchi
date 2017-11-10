@@ -1,13 +1,12 @@
-#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/mman.h>
-#include <sys/types.h>
 #include <unistd.h>
 
-#include "maki-uchi.h"
+#include "entry.h"
 #include "list.h"
+#include "maki-uchi.h"
+#include "reader.h"
 
 #define ONE_DAY (24 * 60 * 60)
 
