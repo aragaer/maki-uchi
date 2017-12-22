@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 #define mu_assert(message, test) do {		\
     if (!(test))				\
       return message;				\
