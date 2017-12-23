@@ -20,7 +20,6 @@ char *format_stamp(time_t value) {
 }
 
 char *file_name = "test.data";
-int parseable;
 
 enum string_idx {
   DATE_SEP,
@@ -32,9 +31,6 @@ enum string_idx {
   EARLIEST,
   DONE,
   NEVER,
-  INCOMPLETE,
-  INCOMPLETE2,
-  INCOMPLETE3,
   MISSING1,
   MISSING2,
 };
@@ -49,9 +45,6 @@ const char *human_readable[] = {
   [EARLIEST] = "The earliest date you did your maki-uchi is",
   [DONE] = "You did your maki-uchi today",
   [NEVER] = "You did not do maki-uchi at all",
-  [INCOMPLETE] = "You only did",
-  [INCOMPLETE2] = "maki-uchi today",
-  [INCOMPLETE3] = "maki-uchi on",
   [MISSING1] = "You should do",
   [MISSING2] = "more maki-uchi",
 };
@@ -65,8 +58,6 @@ const char *computer_readable[] = {
   [EARLIEST] = "earliest",
   [DONE] = "last today",
   [NEVER] = "last never",
-  [INCOMPLETE] = "only",
-  [INCOMPLETE3] = "on",
 };
 
 const char * const *_ = human_readable;
@@ -94,7 +85,7 @@ void print_skipped(maki_uchi_log_t *log) {
   printf("\n");
 }
 
-void print_incomplete(maki_uchi_log_t *log) {
+void print_incomplete_computer(maki_uchi_log_t *log) {
   int count;
   for (count = 1; count < DAILY_REQUIREMENT; count++) {
     log_entry_t *entry = log_get_entry_before(log, NULL);
@@ -102,14 +93,36 @@ void print_incomplete(maki_uchi_log_t *log) {
     for (; entry; entry = log_get_entry_before(log, entry))
       if (entry->count == count) {
 	time_t displayed_end = entry->end;
-	if (!parseable && time(NULL) < displayed_end) // already printed as today count
+	if (entry->start > displayed_end)
+	  continue;
+	if (header_printed)
+	  printf(" ");
+	else
+	  printf("only %d on ", count);
+	header_printed = 1;
+	print_period(entry->start, displayed_end);
+      }
+    if (header_printed)
+      printf("\n");
+  }
+}
+
+void print_incomplete_human(maki_uchi_log_t *log) {
+  int count;
+  for (count = 1; count < DAILY_REQUIREMENT; count++) {
+    log_entry_t *entry = log_get_entry_before(log, NULL);
+    int header_printed = 0;
+    for (; entry; entry = log_get_entry_before(log, entry))
+      if (entry->count == count) {
+	time_t displayed_end = entry->end;
+	if (time(NULL) < displayed_end) // already printed as today count
 	  displayed_end -= ONE_DAY;
 	if (entry->start > displayed_end)
 	  continue;
 	if (header_printed)
-	  printf("%s", _[PERIOD_SEP]);
+	  printf(", ");
 	else
-	  printf("%s %d %s ", _[INCOMPLETE], count, _[INCOMPLETE3]);
+	  printf("You only did %d maki-uchi on ", count);
 	header_printed = 1;
 	print_period(entry->start, displayed_end);
       }
@@ -131,11 +144,9 @@ void store_log(maki_uchi_log_t *log) {
   close(fd);
 }
 
-void print_log(maki_uchi_log_t *log) {
+void print_log_computer(maki_uchi_log_t *log) {
   int today_count = log_status(log, time(NULL));
   if (today_count == 0) {
-    if (!parseable)
-      printf("%s\n", _[NOT_DONE]);
     log_entry_t *entry = log_get_last_entry(log);
     if (entry == NULL)
       printf("%s\n", _[NEVER]);
@@ -143,16 +154,37 @@ void print_log(maki_uchi_log_t *log) {
       printf("%s %s\n", _[LAST], format_stamp(entry->end));
   } else if (today_count == DAILY_REQUIREMENT)
     printf("%s\n", _[DONE]);
-  else if (!parseable)
-    printf("%s %d %s\n%s %d %s\n", _[INCOMPLETE], today_count, _[INCOMPLETE2],
+  log_entry_t *first = log_get_first_entry(log);
+  if (first != log_get_last_entry(log))
+    print_skipped(log);
+  print_incomplete_computer(log);
+  if (first != NULL)
+    printf("%s %s\n", _[EARLIEST], format_stamp(first->start));
+}
+
+void print_log_human(maki_uchi_log_t *log) {
+  int today_count = log_status(log, time(NULL));
+  if (today_count == 0) {
+    printf("%s\n", _[NOT_DONE]);
+    log_entry_t *entry = log_get_last_entry(log);
+    if (entry == NULL)
+      printf("%s\n", _[NEVER]);
+    else
+      printf("%s %s\n", _[LAST], format_stamp(entry->end));
+  } else if (today_count == DAILY_REQUIREMENT)
+    printf("%s\n", _[DONE]);
+  else
+    printf("You only did %d maki-uchi today\n%s %d %s\n", today_count,
 	   _[MISSING1], DAILY_REQUIREMENT - today_count, _[MISSING2]);
   log_entry_t *first = log_get_first_entry(log);
   if (first != log_get_last_entry(log))
     print_skipped(log);
-  print_incomplete(log);
+  print_incomplete_human(log);
   if (first != NULL)
     printf("%s %s\n", _[EARLIEST], format_stamp(first->start));
 }
+
+void (*print_log)(maki_uchi_log_t *log) = print_log_human;
 
 void parse_args(int argc, char *argv[]) {
   int opt;
@@ -162,8 +194,8 @@ void parse_args(int argc, char *argv[]) {
       file_name = optarg;
       break;
     case 'p':
-      parseable = 1;
       _ = computer_readable;
+      print_log = print_log_computer;
       break;
     default:
       usage();
