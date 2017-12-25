@@ -4,7 +4,8 @@
 #include <stddef.h>
 
 struct list_head {
-  struct list_head *prev, *next;
+  struct list_head *prev;
+  struct list_head *next;
 };
 
 #define container_of(ptr, type, member) ({                      \

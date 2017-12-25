@@ -37,7 +37,8 @@ int log_status(maki_uchi_log_t *log, time_t timestamp) {
 }
 
 void merge_entries(maki_uchi_log_t *log) {
-  struct list_head *first, *second;
+  struct list_head *first;
+  struct list_head *second;
   first = log->head.next;
   second = first->next;
   for (; second != &log->head; first = second, second = second->next) {

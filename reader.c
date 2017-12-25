@@ -68,11 +68,11 @@ static void read_count(struct read_runner *this) {
 }
 
 static void (*sm[])(struct read_runner *) = {
-  [BEGIN] = read_date,
-  [ONE_DATE] = read_hyphen,
-  [SECOND_DATE] = read_date,
-  [COUNT] = read_count,
-  [EOL] = read_eol,
+  [BEGIN] = &read_date,
+  [ONE_DATE] = &read_hyphen,
+  [SECOND_DATE] = &read_date,
+  [COUNT] = &read_count,
+  [EOL] = &read_eol,
 };
 
 void reader_step(struct read_runner *this) {

@@ -6,7 +6,8 @@
 typedef struct log_entry_s {
   struct list_head list;
   int count;
-  time_t start, end;
+  time_t start;
+  time_t end;
 } log_entry_t;
 
 #define DAYS(e) (((e)->end - (e)->start + 1)/ONE_DAY)
