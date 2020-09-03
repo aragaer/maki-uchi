@@ -12,14 +12,14 @@
 #include "maki-uchi.h"
 #include "print.h"
 
-void usage() {
-  fprintf(stderr, "Usage: maki-uchi [-f filename] [number]\n");
+int usage() {
+  fprintf(stderr, "Usage: maki-uchi [-f filename] [-o date_offset] [number]\n");
   exit(EXIT_FAILURE);
 }
 
 void store_log(maki_uchi_log_t *log, char *file_name) {
   int fd = open(file_name, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-  if (fd == -1 && errno != ENOENT)
+  if (fd == -1)
     perror("open");
   log_write_file(log, fd);
   close(fd);
@@ -39,9 +39,16 @@ struct args {
   char *file_name;
 };
 
-void (*print_log)(maki_uchi_log_t *log);
+int str_to_int_or_usage(char *str, const char *desc) {
+  int result, bytes, value;
+  result = sscanf(str, "%d%n", &value, &bytes);
+  if (result == 1 && bytes == strlen(str))
+    return value;
+  fprintf(stderr, "Failed to parse %s: %s\nExpected integer.\n", desc, str);
+  return usage();
+}
 
-int parse_args(int argc, char *argv[], struct args *args) {
+void parse_args(int argc, char *argv[], struct args *args) {
   int opt;
   while ((opt = getopt(argc, argv, "pf:o:")) != -1)
     switch (opt) {
@@ -51,21 +58,12 @@ int parse_args(int argc, char *argv[], struct args *args) {
     case 'p':
       args->print_log = print_log_computer;
       break;
-    case 'o': {
-      int x, result;
-      result = sscanf(optarg, "%d%n", &args->date_offset, &x);
-      if (result != 1 || x < strlen(optarg)) {
-        printf("%d %d\n", result, x);
-        fprintf(stderr, "Failed to parse date offset: %s\nExpected integer.\n",
-                optarg);
-        return -1;
-      }
-    } break;
+    case 'o':
+      args->date_offset = str_to_int_or_usage(optarg, "date offset");
+      break;
     default:
       usage();
-      return 0;
     }
-  return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -77,18 +75,13 @@ int main(int argc, char *argv[]) {
     .print_log = print_log_human,
     .file_name = "test.data",
   };
-  int result = parse_args(argc, argv, &args);
-  if (result != 0)
-    return result;
-  print_log = args.print_log;
+  parse_args(argc, argv, &args);
 
   read_log(&log, args.file_name);
   if (optind < argc) {
-    int count;
-    if (sscanf(argv[optind], "%d", &count) != 1)
-      usage();
-    log_add(&log, count, time(NULL) + args.date_offset*ONE_DAY);
+    int count = str_to_int_or_usage(argv[optind], "number");
+    log_add(&log, count, time(NULL) + args.date_offset * ONE_DAY);
     store_log(&log, args.file_name);
   } else
-    print_log(&log);
+    args.print_log(&log);
 }
