@@ -1,9 +1,8 @@
 #include <stdio.h>
 
 #include "human.h"
+#include "maki-uchi.h"
 #include "print.h"
-
-#define ONE_DAY (60*60*24)
 
 static void print_period(time_t start, time_t end) {
   printf("%s", format_stamp(start+1));

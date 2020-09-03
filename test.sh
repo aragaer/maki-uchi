@@ -115,3 +115,6 @@ check_cmd_output "$cmd" "last today"
 
 > $test_file
 check_cmd_output "$cmd" "last never"
+
+./maki-uchi -f $test_file 10 -o -1
+check_string "$(cat $test_file)" "${DATES[1]} 10"

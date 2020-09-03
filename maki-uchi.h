@@ -7,6 +7,7 @@
 #include "log.h"
 
 #define DAILY_REQUIREMENT 10
+#define ONE_DAY (60*60*24)
 
 void log_add(maki_uchi_log_t *log, int count, time_t timestamp);
 size_t log_write(maki_uchi_log_t *log, char *buf, size_t bufsize);
