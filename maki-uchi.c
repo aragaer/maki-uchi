@@ -32,10 +32,10 @@ void log_add(maki_uchi_log_t *log, int count, time_t timestamp) {
       int missing = DAILY_REQUIREMENT - entry->count;
       int added = MIN(missing, count);
       if (DAYS(entry) > 1) {
-	insert_one_day_entry(log, entry->end - ONE_DAY + 1, entry->count + added);
-	entry->end -= ONE_DAY;
+        insert_one_day_entry(log, entry->end - ONE_DAY + 1, entry->count + added);
+        entry->end -= ONE_DAY;
       } else
-	entry->count += added;
+        entry->count += added;
       count -= added;
       timestamp -= ONE_DAY;
     } else
@@ -61,7 +61,7 @@ size_t log_write(maki_uchi_log_t *log, char *buf, size_t bufsize) {
   struct list_head *item;
   for (item = log->head.next; item != &log->head; item = item->next)
     result += write_entry(from_list_head(item),
-			  buf+result, bufsize-result);
+                          buf+result, bufsize-result);
   if (result < bufsize)
     buf[result] = '\0';
   return result;

@@ -1,6 +1,8 @@
 #ifndef _ENTRY_H_
 #define _ENTRY_H_
 
+#include <stdlib.h>
+
 #include "list.h"
 
 typedef struct log_entry_s {

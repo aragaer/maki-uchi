@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 
+#include "log.h"
 #include "maki-uchi.h"
 #include "minunit.h"
 #include "test.h"
@@ -64,10 +65,10 @@ static char *test_log_multiple_days() {
   for (i = 0; i < 10; i++) {
     debug("Day %i %ld\n", i * 2, timestamp + ONE_DAY * i * 2);
     mu_assert("Done for even day",
-	      log_status(log, timestamp + ONE_DAY * i * 2) == 10);
+              log_status(log, timestamp + ONE_DAY * i * 2) == 10);
     debug("Day %i %ld\n", i * 2 + 1, timestamp + ONE_DAY * (i * 2 + 1));
     mu_assert("Not done for odd day",
-	      log_status(log, timestamp + ONE_DAY * (i * 2 + 1)) == 0);
+             log_status(log, timestamp + ONE_DAY * (i * 2 + 1)) == 0);
   }
   log_release(log);
   return NULL;

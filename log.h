@@ -4,6 +4,7 @@
 #include <time.h>
 
 #include "list.h"
+#include "entry.h"
 
 typedef struct maki_uchi_log_s {
   struct list_head head;
